@@ -2,16 +2,15 @@
 
 import React from "react";
 import Ribbon from "@/components/Ribbon/Ribbon";
-import Image from "next/image";
-import { mockFeatured } from "@/lib/mockData";
+import Product from "@/components/Product/Product";
+import { mockSarees } from "@/lib/mockData";
+import type { Product as ProductType } from "@/types";
 
-type FeaturedItem = {
-  id: string;
-  title: string;
-  image_url?: string;
+type Props = {
+  items?: ProductType[];
 };
 
-export default function FeaturedRibbon({ items = mockFeatured }: { items?: FeaturedItem[] }) {
+export default function FeaturedRibbon({ items = mockSarees.slice(0, 8) }: Props) {
   return (
     <Ribbon
       title="Featured Sarees"
@@ -21,24 +20,9 @@ export default function FeaturedRibbon({ items = mockFeatured }: { items?: Featu
         </a>
       }
       items={items}
-      renderItem={(it: FeaturedItem, index?: number) => {
-        const pastelColors = ['bg-yellow-100', 'bg-pink-100', 'bg-blue-100', 'bg-purple-100', 'bg-green-100'];
-        const bgColor = pastelColors[(index ?? 0) % pastelColors.length];
-        return (
-          <div className="w-80 rounded overflow-hidden border border-gray-300 bg-white dark:bg-gray-900 shadow-sm">
-            <div className={`relative h-44 ${bgColor}`}>
-              {it.image_url ? (
-                <Image src={it.image_url} alt={it.title} fill style={{ objectFit: "cover" }} />
-              ) : (
-                <div className="h-full flex items-center justify-center text-gray-600">No image</div>
-              )}
-            </div>
-            <div className="p-3">
-              <div className="font-semibold text-gray-900">{it.title}</div>
-            </div>
-          </div>
-        );
-      }}
+      renderItem={(product: ProductType) => (
+        <Product product={product} size="compact" />
+      )}
     />
   );
 }

@@ -20,6 +20,12 @@ export default function ShortRibbon() {
       <nav className="bg-rose-600 text-white py-3">
         <div className="flex items-center justify-center gap-6">
           <Link
+            href="/sarees"
+            className="px-3 py-1 rounded hover:bg-rose-500 transition-colors"
+          >
+            Sarees
+          </Link>
+          <Link
             href="/shops"
             className="px-3 py-1 rounded hover:bg-rose-500 transition-colors"
           >
@@ -31,6 +37,12 @@ export default function ShortRibbon() {
             className="px-3 py-1 rounded hover:bg-rose-500 transition-colors"
           >
             Categories
+          </Link>
+          <Link
+            href="/featured"
+            className="px-3 py-1 rounded hover:bg-rose-500 transition-colors"
+          >
+            Featured
           </Link>
         </div>
       </nav>

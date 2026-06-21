@@ -1,19 +1,28 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import { mockShops } from "@/lib/mockData";
+import Shops from "@/components/Shops/Shops";
+import ShopsFilter, { FilterState } from "@/components/ShopsFilter/ShopsFilter";
 
 export default function ShopsPage() {
+  const [filters, setFilters] = useState<FilterState>({
+    priceRange: [0, 100000],
+    selectedTypes: [],
+  });
+
   return (
-    <main className="min-h-screen py-8">
+    <main className="min-h-screen w-full bg-white dark:bg-gray-950">
       <div className="w-full px-4">
-        <div className="w-full max-w-6xl mx-auto">
-          <h1 className="text-2xl font-bold mb-4">Shops</h1>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {mockShops.map((s) => (
-              <div key={s.id} className="border rounded-md p-4">
-                <div className="font-semibold">{s.name}</div>
-                <div className="text-sm text-gray-600">{s.description}</div>
-              </div>
-            ))}
+        <div className="w-full mx-auto">
+          <div className="flex gap-6">
+            {/* Left: Filters */}
+            <ShopsFilter onFilterChange={setFilters} />
+
+            {/* Right: Shops Display */}
+            <div className="flex-1  min-w-0">
+              <Shops shops={mockShops} />
+            </div>
           </div>
         </div>
       </div>

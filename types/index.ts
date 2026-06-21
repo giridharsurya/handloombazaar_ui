@@ -16,6 +16,18 @@ export interface Category {
   color?: string;
 }
 
+export interface Product {
+  id: ID;
+  title: string;
+  image_url: string;
+  price: number;
+  category: string;
+  shop_name: string;
+  shop_id: number;
+  shop_logo_url: string;
+  description: string;
+}
+
 export interface IconProps {
   imageUrl?: string;
   label?: string;

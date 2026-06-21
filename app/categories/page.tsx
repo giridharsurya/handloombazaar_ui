@@ -1,18 +1,28 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
 import { mockCategories } from "@/lib/mockData";
+import Categories from "@/components/Categories/Categories";
+import CategoriesFilter, { FilterState } from "@/components/CategoriesFilter/CategoriesFilter";
 
 export default function CategoriesPage() {
+  const [filters, setFilters] = useState<FilterState>({
+    priceRange: [0, 50000],
+    selectedMaterials: [],
+  });
+
   return (
-    <main className="min-h-screen py-8">
+    <main className="min-h-screen w-full bg-white dark:bg-gray-950">
       <div className="w-full px-4">
-        <div className="w-full max-w-6xl mx-auto">
-          <h1 className="text-2xl font-bold mb-4">Categories</h1>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {mockCategories.map((c) => (
-              <div key={c.id} className="border rounded-md p-4">
-                <div className="font-semibold">{c.name}</div>
-              </div>
-            ))}
+        <div className="w-full mx-auto">
+          <div className="flex gap-6">
+            {/* Left: Filters */}
+            <CategoriesFilter onFilterChange={setFilters} />
+
+            {/* Right: Categories Display */}
+            <div className="flex-1 min-w-0">
+              <Categories categories={mockCategories} />
+            </div>
           </div>
         </div>
       </div>
