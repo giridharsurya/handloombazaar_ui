@@ -24,3 +24,23 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Ribbon helpers */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.ribbon-item {
+  scroll-snap-align: start;
+}
+.overflow-x-auto {
+  scroll-snap-type: x proximity;
+}
+
+/* Arrow button tweaks */
+.ribbon-arrow-hidden { display: none; }
+
+
