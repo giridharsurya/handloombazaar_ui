@@ -56,7 +56,7 @@ export default function SareesFilter({ categories, onFilterChange }: SareesFilte
   };
 
   return (
-    <aside className="w-64 bg-gray-50 dark:bg-gray-900 rounded-lg p-6 h-fit sticky top-24">
+    <aside className="w-full bg-gray-50 dark:bg-gray-900 rounded-lg p-6 h-fit">
       <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Filters</h3>
 
       {/* Price Range Filter */}
