@@ -17,13 +17,22 @@ export default function SareesPage() {
   const sidebarRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
+    const getStickyTop = () => {
+      const rootStyles = getComputedStyle(document.documentElement);
+      const appHeaderHeight =
+        Number.parseFloat(rootStyles.getPropertyValue("--app-header-height")) || 120;
+      const filterHeaderHeight =
+        Number.parseFloat(rootStyles.getPropertyValue("--filter-header-height")) || 72;
+      return appHeaderHeight + filterHeaderHeight;
+    };
+
     const updateHeaderSticky = () => {
       if (!showFilters || !sidebarRef.current) {
         setIsHeaderSticky(true);
         return;
       }
 
-      const stickyTop = 208; // 13rem
+      const stickyTop = getStickyTop();
       const sidebarTop = sidebarRef.current.getBoundingClientRect().top;
       setIsHeaderSticky(sidebarTop >= stickyTop - 1);
     };
@@ -72,7 +81,10 @@ export default function SareesPage() {
             {showFilters && (
               <aside
                 ref={sidebarRef}
-                className="w-64 shrink-0 sticky top-[13rem] self-start"
+                className="w-64 shrink-0 sticky self-start"
+                style={{
+                  top: "calc(var(--app-header-height, 120px) + var(--filter-header-height, 72px))",
+                }}
               >
                 <SareesFilter
                   categories={categoryNames}

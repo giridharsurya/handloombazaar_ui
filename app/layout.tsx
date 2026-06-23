@@ -30,7 +30,7 @@ export default function RootLayout({
     >
       <body className="min-h-full overflow-x-hidden">
         <Header />
-        <div className="pt-30">
+        <div style={{ paddingTop: "var(--app-header-height, 120px)" }}>
           {children}
         </div>
       </body>

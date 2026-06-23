@@ -2,6 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import type { Product } from "@/types";
 
 type ProductProps = {
@@ -15,7 +16,11 @@ export default function Product({ product, size = "default", hideShop = false, h
   const isCompact = size === "compact";
 
   return (
-    <div className={`bg-white dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow ${isCompact ? "w-40" : ""}`}>
+    <Link
+      href={`/sarees/${product.id}`}
+      aria-label={`View ${product.title}`}
+      className={`block bg-white dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-rose-500 ${isCompact ? "w-40" : ""}`}
+    >
       {/* Image Container */}
       <div className={`relative bg-yellow-100 overflow-hidden ${isCompact ? "h-40" : "h-64"}`}>
         <Image
@@ -67,13 +72,16 @@ export default function Product({ product, size = "default", hideShop = false, h
           <span className={`font-bold text-rose-600 ${isCompact ? "text-xs" : "text-lg"}`}>
             ₹{product.price.toLocaleString()}
           </span>
+          <span className={`text-rose-600 ${isCompact ? "text-xs" : "text-sm font-medium"}`}>
+            View
+          </span>
           {!isCompact && (
-            <button disabled className="px-3 py-2 bg-gray-300 text-gray-600 text-xs rounded cursor-not-allowed opacity-50">
+            <span className="px-3 py-2 bg-gray-300 text-gray-600 text-xs rounded opacity-50">
               Add to Cart
-            </button>
+            </span>
           )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

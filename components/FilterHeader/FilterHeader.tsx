@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 type SortOption = "relevance" | "price-low" | "price-high" | "newest";
 
@@ -24,6 +24,30 @@ export default function FilterHeader({
   isSticky = true,
 }: FilterHeaderProps) {
   const [sortBy, setSortBy] = useState<SortOption>("relevance");
+  const headerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!headerRef.current) {
+      return;
+    }
+
+    const updateFilterHeaderHeight = () => {
+      const height = headerRef.current?.offsetHeight ?? 0;
+      document.documentElement.style.setProperty("--filter-header-height", `${height}px`);
+    };
+
+    updateFilterHeaderHeight();
+
+    const observer = new ResizeObserver(updateFilterHeaderHeight);
+    observer.observe(headerRef.current);
+
+    window.addEventListener("resize", updateFilterHeaderHeight);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateFilterHeaderHeight);
+    };
+  }, [showFiltersToggle]);
 
   const handleSortChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newSort = e.target.value as SortOption;
@@ -33,17 +57,19 @@ export default function FilterHeader({
 
   return (
     <div
+      ref={headerRef}
       className={`${
-        isSticky ? "sticky top-[7.5rem] z-40" : "relative"
+        isSticky ? "sticky z-40" : "relative"
       } w-full bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800`}
+      style={isSticky ? { top: "var(--app-header-height, 120px)" } : undefined}
     >
-      <div className="w-full px-4 py-4">
+      <div className="w-full px-4 py-1">
         <div className="w-full mx-auto flex items-center justify-between">
           {/* Left: Filter Toggle */}
           {showFiltersToggle && (
             <button
               onClick={onToggleFilters}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
             >
               <span className="text-sm font-semibold text-gray-900 dark:text-white">
                 Filter by
@@ -60,7 +86,7 @@ export default function FilterHeader({
 
           {/* Center: Title and Count */}
           <div className="flex-1 text-center">
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+            <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-0.5 leading-tight">
               {pageTitle}
             </h1>
             <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -76,7 +102,7 @@ export default function FilterHeader({
             <select
               value={sortBy}
               onChange={handleSortChange}
-              className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
+              className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
             >
               <option value="relevance">Relevance</option>
               <option value="price-low">Price: Low to High</option>

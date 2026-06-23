@@ -32,7 +32,7 @@ export default function Ribbon<T>({ items, renderItem, title, action, className 
   };
 
   return (
-    <section className={`my-6 relative bg-rose-50 py-4 -mx-4 px-4 ${className}`}>
+    <section className={`relative bg-rose-50 py-4 -mx-4 px-4 ${className}`}>
       {title && (
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-bold text-gray-900">{title}</h2>

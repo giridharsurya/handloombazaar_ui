@@ -17,7 +17,7 @@ import Link from "next/link";
 export default function ShortRibbon() {
   return (
     <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen">
-      <nav className="bg-rose-600 text-white py-3">
+      <nav className="bg-rose-600 text-white py-1">
         <div className="flex items-center justify-center gap-6">
           <Link
             href="/sarees"

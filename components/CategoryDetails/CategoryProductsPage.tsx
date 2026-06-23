@@ -1,14 +1,17 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
-import { mockSarees, mockCategories } from "@/lib/mockData";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import FilterHeader from "@/components/FilterHeader/FilterHeader";
 import ProductGrid from "@/components/ProductGrid/ProductGrid";
 import SareesFilter, { FilterState } from "@/components/SareesFilter/SareesFilter";
-import FilterHeader from "@/components/FilterHeader/FilterHeader";
+import type { Product } from "@/types";
 
-export default function FeaturedPage() {
-  const featuredProducts = mockSarees.slice(0, 8);
+type CategoryProductsPageProps = {
+  categoryName: string;
+  products: Product[];
+};
 
+export default function CategoryProductsPage({ categoryName, products }: CategoryProductsPageProps) {
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 25000],
     selectedCategories: [],
@@ -49,26 +52,28 @@ export default function FeaturedPage() {
     };
   }, [showFilters]);
 
-  const filteredFeatured = featuredProducts.filter((product) => {
-    const priceMatch =
-      product.price >= filters.priceRange[0] &&
-      product.price <= filters.priceRange[1];
+  const categoryNames = [categoryName];
 
-    const categoryMatch =
-      filters.selectedCategories.length === 0 ||
-      filters.selectedCategories.includes(product.category);
+  const filteredProducts = useMemo(() => {
+    return products.filter((saree) => {
+      const priceMatch =
+        saree.price >= filters.priceRange[0] &&
+        saree.price <= filters.priceRange[1];
 
-    return priceMatch && categoryMatch;
-  });
+      const categoryMatch =
+        filters.selectedCategories.length === 0 ||
+        filters.selectedCategories.includes(saree.category);
 
-  const categoryNames = mockCategories.map((cat) => cat.name);
+      return priceMatch && categoryMatch;
+    });
+  }, [products, filters]);
 
   return (
     <main className="min-h-screen bg-white dark:bg-gray-950">
       <section>
         <FilterHeader
-          pageTitle="Featured Sarees"
-          productCount={filteredFeatured.length}
+          pageTitle={`${categoryName} Sarees`}
+          productCount={filteredProducts.length}
           showFiltersToggle={true}
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
@@ -93,11 +98,27 @@ export default function FeaturedPage() {
             )}
 
             <section className="flex-1 min-w-0">
-              <ProductGrid products={filteredFeatured} />
+              <ProductGrid products={filteredProducts} />
             </section>
           </div>
         </div>
       </section>
+
+      <div className="px-4 pb-8">
+        <section className="mt-16 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-8">
+          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
+            Sample Footer Content
+          </h2>
+          <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
+            This is temporary placeholder content to validate that the filter header
+            and filters section move up once the products area ends.
+          </p>
+          <p className="text-sm text-gray-700 dark:text-gray-300">
+            Replace this block later with links, copyright text, newsletter signup,
+            policy links, or any other end-of-page content.
+          </p>
+        </section>
+      </div>
     </main>
   );
 }

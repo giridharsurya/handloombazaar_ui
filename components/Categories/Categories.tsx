@@ -10,7 +10,7 @@ type CategoriesProps = {
 
 export default function Categories({ categories }: CategoriesProps) {
   return (
-    <div className="space-y-12">
+    <div className="space-y-6">
       {categories.map((category) => (
         <CategorySection key={category.id} category={category} />
       ))}

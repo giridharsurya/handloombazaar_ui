@@ -3,6 +3,8 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --app-header-height: 120px;
+  --filter-header-height: 72px;
 }
 
 @theme inline {

@@ -10,7 +10,7 @@ export default function Home() {
   return (
     <main className="min-h-screen w-full bg-white dark:bg-gray-950">
       <div className="w-full px-4">
-        <div className="w-full">
+        <div className="w-full space-y-4">
           {/* Announcements / Collections ribbon */}
           <AnnouncementsRibbon />
 
