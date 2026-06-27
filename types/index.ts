@@ -18,14 +18,13 @@ export interface Category {
 
 export interface Product {
   id: ID;
-  title: string;
+  name: string;
   image_url: string;
-  price: number;
-  category: string;
-  shop_name: string;
   shop_id: number;
+  shop_name: string;
   shop_logo_url: string;
-  description: string;
+  price: number;
+  discount_price?: number;
 }
 
 export interface IconProps {

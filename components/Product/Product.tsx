@@ -18,14 +18,14 @@ export default function Product({ product, size = "default", hideShop = false, h
   return (
     <Link
       href={`/sarees/${product.id}`}
-      aria-label={`View ${product.title}`}
+      aria-label={`View ${product.name}`}
       className={`block bg-white dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-rose-500 ${isCompact ? "w-40" : ""}`}
     >
       {/* Image Container */}
       <div className={`relative bg-yellow-100 overflow-hidden ${isCompact ? "h-40" : "h-64"}`}>
         <Image
           src={product.image_url}
-          alt={product.title}
+          alt={product.name}
           fill
           style={{ objectFit: "cover" }}
         />
@@ -51,10 +51,10 @@ export default function Product({ product, size = "default", hideShop = false, h
         )}
 
         <h3 className={`font-semibold text-gray-900 dark:text-white line-clamp-2 ${isCompact ? "text-xs mb-1" : "text-sm mb-2"}`}>
-          {product.title}
+          {product.name}
         </h3>
 
-        {!isCompact && (
+        {/* {!isCompact && (
           <>
             {!hideCategory && (
               <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
@@ -66,7 +66,7 @@ export default function Product({ product, size = "default", hideShop = false, h
               {product.description}
             </p>
           </>
-        )}
+        )} */}
 
         <div className={`flex items-center ${isCompact ? "justify-between gap-1" : "justify-between"}`}>
           <span className={`font-bold text-rose-600 ${isCompact ? "text-xs" : "text-lg"}`}>
@@ -75,11 +75,11 @@ export default function Product({ product, size = "default", hideShop = false, h
           <span className={`text-rose-600 ${isCompact ? "text-xs" : "text-sm font-medium"}`}>
             View
           </span>
-          {!isCompact && (
+          {/* {!isCompact && (
             <span className="px-3 py-2 bg-gray-300 text-gray-600 text-xs rounded opacity-50">
               Add to Cart
             </span>
-          )}
+          )} */}
         </div>
       </div>
     </Link>
