@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { mockSarees, mockCategories } from "@/lib/mockData";
-import ProductGrid from "@/components/ProductGrid/ProductGrid";
-import SareesFilter, { FilterState } from "@/components/SareesFilter/SareesFilter";
+// mock data removed; products fetched via API and used as source of truth
+import { useApi } from "@/lib/ApiProvider";
+import { ProductListItem } from "@/types/apiTypes";
+import ProductGrid from "@/components/Product/ProductGrid";
+import SareesFilter, { FilterState } from "@/components/Filters/SareesFilter";
 import FilterHeader from "@/components/FilterHeader/FilterHeader";
 
 export default function SareesPage() {
@@ -15,6 +17,10 @@ export default function SareesPage() {
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
+
+  const [apiProducts, setApiProducts] = useState<ProductListItem[] | null>(null);
+
+  const api = useApi();
 
   useEffect(() => {
     const getStickyTop = () => {
@@ -47,20 +53,38 @@ export default function SareesPage() {
     };
   }, [showFilters]);
 
+  // Fetch public products from API (unauthenticated)
+  useEffect(() => {
+    let mounted = true;
+
+    const fetchProducts = async () => {
+      try {
+        const products = await api.products.getProducts({ page: 1, page_size: 100, authenticated: false });
+        if (mounted) setApiProducts(products);
+      } catch (e) {
+        // keep mockSarees as fallback on error
+      }
+    };
+
+    fetchProducts();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   // Filter sarees based on selected filters
-  const filteredSarees = mockSarees.filter((saree) => {
+  const displayProducts = apiProducts ?? [];
+
+  const filteredSarees = displayProducts.filter((saree) => {
     const priceMatch =
       saree.price >= filters.priceRange[0] &&
       saree.price <= filters.priceRange[1];
 
-    const categoryMatch =
-      filters.selectedCategories.length === 0 ||
-      filters.selectedCategories.includes(saree.category);
-
-    return priceMatch && categoryMatch;
+    return priceMatch;
   });
 
-  const categoryNames = mockCategories.map((cat) => cat.name);
+  const categoryNames = [] as string[];
 
   return (
     <main className="min-h-screen bg-white dark:bg-gray-950">

@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header/Header";
+import { AuthProvider } from "@/lib/AuthContext";
+import { ApiProvider } from "@/lib/ApiProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,10 +31,14 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full overflow-x-hidden">
-        <Header />
-        <div style={{ paddingTop: "var(--app-header-height, 120px)" }}>
-          {children}
-        </div>
+        <ApiProvider>
+          <AuthProvider>
+            <Header />
+            <div style={{ paddingTop: "var(--app-header-height, 120px)" }}>
+              {children}
+            </div>
+          </AuthProvider>
+        </ApiProvider>
       </body>
     </html>
   );

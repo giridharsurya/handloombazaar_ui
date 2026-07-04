@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { mockShops, mockSarees } from "@/lib/mockData";
-import Shops from "@/components/Shops/Shops";
-import ShopsFilter, { FilterState } from "@/components/ShopsFilter/ShopsFilter";
+// Fetch shops from backend
+import api from "@/lib/api";
+import ShopProductsRibbon from "@/components/Ribbon/ShopProductsRibbon";
+import ShopsFilter, { FilterState } from "@/components/Filters/ShopsFilter";
 import FilterHeader from "@/components/FilterHeader/FilterHeader";
+import type { ShopStatusResponse } from "@/types/apiTypes";
 
 export default function ShopsPage() {
   const [filters, setFilters] = useState<FilterState>({
@@ -15,6 +17,10 @@ export default function ShopsPage() {
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
+
+  const [shops, setShops] = useState<ShopStatusResponse[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [productsMap, setProductsMap] = useState<Record<string, any[]>>({});
 
   useEffect(() => {
     const getStickyTop = () => {
@@ -47,28 +53,67 @@ export default function ShopsPage() {
     };
   }, [showFilters]);
 
-  const filteredShops = mockShops.filter((shop) => {
-    const shopProducts = mockSarees.filter((product) => product.shop_id === shop.id);
-    const hasProductInRange = shopProducts.some(
-      (product) =>
-        product.price >= filters.priceRange[0] &&
-        product.price <= filters.priceRange[1]
-    );
+  useEffect(() => {
+    let mounted = true;
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await api.shops.list();
+        if (!mounted) return;
+        setShops(Array.isArray(data) ? data : []);
+      } catch (e) {
+        // keep shops empty on error
+        console.error("Failed to load shops", e);
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+    load();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
-    const typeMatch =
-      filters.selectedTypes.length === 0 ||
-      filters.selectedTypes.some((type) => {
-        const normalizedType = type.toLowerCase();
-        const shopName = shop.name.toLowerCase();
-        const shopDescription = (shop.description ?? "").toLowerCase();
-        return (
-          shopName.includes(normalizedType) ||
-          shopDescription.includes(normalizedType)
+  // When shops load, fetch a small set of products for each shop to display in the section
+  React.useEffect(() => {
+    if (!shops || shops.length === 0) return;
+    let mounted = true;
+    const loadProducts = async () => {
+      try {
+        const entries = await Promise.all(
+          shops.map(async (s) => {
+            try {
+              const items = await api.products.getProducts({ shop_display_id: s.display_id, page: 1, page_size: 6 });
+              return [s.display_id, items as any[]] as const;
+            } catch (e) {
+              console.error("Failed to load products for shop", s.display_id, e);
+              return [s.display_id, [] as any[]] as const;
+            }
+          }),
         );
-      });
+        if (!mounted) return;
+        const map: Record<string, any[]> = {};
+        for (const tuple of entries) {
+          const k = tuple[0];
+          const v = tuple[1] as any[];
+          map[k] = v;
+        }
+        setProductsMap(map);
+      } catch (e) {
+        console.error("Failed to load shop products", e);
+      }
+    };
+    loadProducts();
+    return () => {
+      mounted = false;
+    };
+  }, [shops]);
 
-    return hasProductInRange && typeMatch;
-  });
+  // For now apply no advanced filters; just use the fetched shop list
+  const filteredShops = shops;
+  const hasProductInRange = false;
+    
+  
 
   return (
     <main className="min-h-screen bg-white dark:bg-gray-950">
@@ -97,7 +142,21 @@ export default function ShopsPage() {
             )}
 
             <section className="flex-1 min-w-0">
-              <Shops shops={filteredShops} />
+                {loading ? (
+                <div className="py-12 text-center">
+                  <p className="text-slate-600">Loading shops…</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {filteredShops.map((shop) => (
+                    <ShopProductsRibbon
+                      key={shop.display_id}
+                      shop={shop}
+                      products={productsMap?.[shop.display_id] || []}
+                    />
+                  ))}
+                </div>
+              )}
             </section>
           </div>
         </div>

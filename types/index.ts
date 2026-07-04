@@ -17,14 +17,22 @@ export interface Category {
 }
 
 export interface Product {
-  id: ID;
+  // Backend contract fields (from ProductListItem)
+  display_id: string;
   name: string;
   image_url: string;
-  shop_id: number;
+  shop_display_id: string;
   shop_name: string;
   shop_logo_url: string;
   price: number;
-  discount_price?: number;
+  discount_price: number | null;
+  is_active?: boolean;
+  // Additional detail fields
+  description?: string | null;
+  stock_quantity?: number;
+  created_at?: string | null;
+  updated_at?: string | null;
+  category?: string;
 }
 
 export interface IconProps {

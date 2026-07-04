@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
-import { mockSarees, mockCategories } from "@/lib/mockData";
-import ProductGrid from "@/components/ProductGrid/ProductGrid";
-import SareesFilter, { FilterState } from "@/components/SareesFilter/SareesFilter";
+// mock data removed; featured products should be fetched from API
+import ProductGrid from "@/components/Product/ProductGrid";
+import SareesFilter, { FilterState } from "@/components/Filters/SareesFilter";
 import FilterHeader from "@/components/FilterHeader/FilterHeader";
 
 export default function FeaturedPage() {
-  const featuredProducts = mockSarees.slice(0, 8);
+  const featuredProducts: any[] = [];
 
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 25000],
@@ -61,7 +61,7 @@ export default function FeaturedPage() {
     return priceMatch && categoryMatch;
   });
 
-  const categoryNames = mockCategories.map((cat) => cat.name);
+  const categoryNames: string[] = [];
 
   return (
     <main className="min-h-screen bg-white dark:bg-gray-950">

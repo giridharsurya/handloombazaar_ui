@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
+import BackendImage from "@/components/BackendImage/BackendImage";
 import Link from "next/link";
-import type { Product } from "@/types";
+import type { ProductListItem } from "@/types/apiTypes";
+import type { Product as LocalProduct } from "@/types";
 
 type ProductProps = {
-  product: Product;
+  product: ProductListItem | LocalProduct;
   size?: "default" | "compact";
   hideShop?: boolean;
   hideCategory?: boolean;
@@ -17,18 +18,17 @@ export default function Product({ product, size = "default", hideShop = false, h
 
   return (
     <Link
-      href={`/sarees/${product.id}`}
+      href={`/sarees/${product.display_id}`}
       aria-label={`View ${product.name}`}
-      className={`block bg-white dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-rose-500 ${isCompact ? "w-40" : ""}`}
+      className={`block bg-white dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-rose-500 `}
     >
       {/* Image Container */}
       <div className={`relative bg-yellow-100 overflow-hidden ${isCompact ? "h-40" : "h-64"}`}>
-        <Image
-          src={product.image_url}
-          alt={product.name}
-          fill
-          style={{ objectFit: "cover" }}
-        />
+        {product.image_url && !String(product.image_url).startsWith("blob:") ? (
+          <BackendImage src={product.image_url} alt={product.name} fill style={{ objectFit: "cover" }} />
+        ) : (
+          <div className="w-full h-full bg-gray-100" />
+        )}
       </div>
 
       {/* Content Container */}
@@ -37,12 +37,11 @@ export default function Product({ product, size = "default", hideShop = false, h
         {!hideShop && (
           <div className={`flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700 ${isCompact ? "mb-2" : "mb-3"}`}>
             <div className={`relative rounded-full overflow-hidden flex-shrink-0 bg-gray-200 ${isCompact ? "w-6 h-6" : "w-8 h-8"}`}>
-              <Image
-                src={product.shop_logo_url}
-                alt={product.shop_name}
-                fill
-                style={{ objectFit: "cover" }}
-              />
+              {product.shop_logo_url && !String(product.shop_logo_url).startsWith("blob:") ? (
+                <BackendImage src={product.shop_logo_url} alt={product.shop_name} fill style={{ objectFit: "cover" }} />
+              ) : (
+                <div className="w-full h-full bg-gray-200" />
+              )}
             </div>
             <span className={`font-semibold text-gray-700 dark:text-gray-300 ${isCompact ? "text-xs" : "text-xs"}`}>
               {isCompact ? product.shop_name.split(" ")[0] : product.shop_name}
