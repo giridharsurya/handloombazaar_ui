@@ -4,15 +4,17 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import BackendImage from "@/components/BackendImage/BackendImage";
 import FilterHeader from "@/components/FilterHeader/FilterHeader";
 import ProductGrid from "@/components/Product/ProductGrid";
+import SelectionToolbar from "@/components/Product/SelectionToolbar";
 import SareesFilter, { FilterState } from "@/components/Filters/SareesFilter";
 import type { ProductListItem, ShopDetail } from "@/types/apiTypes";
 
 type ShopDetailsPageProps = {
   shop: ShopDetail;
   products: ProductListItem[];
+  scope?: string;
 };
 
-export default function ShopDetailsPage({ shop, products }: ShopDetailsPageProps) {
+export default function ShopDetailsPage({ shop, products, scope }: ShopDetailsPageProps) {
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 25000],
     selectedCategories: [],
@@ -37,6 +39,7 @@ export default function ShopDetailsPage({ shop, products }: ShopDetailsPageProps
       }),
     [products, filters]
   );
+
 
   useEffect(() => {
     const getStickyTop = () => {
@@ -147,7 +150,8 @@ export default function ShopDetailsPage({ shop, products }: ShopDetailsPageProps
             )}
 
             <section className="flex-1 min-w-0">
-              <ProductGrid products={filteredProducts} hideShop={true} />
+              <SelectionToolbar visibleIds={filteredProducts.map((p) => p.display_id)} scope={scope ?? "public"} />
+              <ProductGrid products={filteredProducts} hideShop={true} showCheckboxes={true} scope={scope ?? "public"} />
             </section>
           </div>
         </div>

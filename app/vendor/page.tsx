@@ -77,5 +77,6 @@ export default function VendorPage() {
     return <div>Shop not found.</div>;
   }
 
-  return <ShopDetailsPage shop={shop} products={products} />;
+  const scope = shopDisplayId ? `vendor:${shopDisplayId}` : undefined;
+  return <ShopDetailsPage shop={shop} products={products} scope={scope} />;
 }

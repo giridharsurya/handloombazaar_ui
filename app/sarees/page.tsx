@@ -5,6 +5,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { useApi } from "@/lib/ApiProvider";
 import { ProductListItem } from "@/types/apiTypes";
 import ProductGrid from "@/components/Product/ProductGrid";
+import SelectionToolbar from "@/components/Product/SelectionToolbar";
 import SareesFilter, { FilterState } from "@/components/Filters/SareesFilter";
 import FilterHeader from "@/components/FilterHeader/FilterHeader";
 
@@ -119,7 +120,8 @@ export default function SareesPage() {
 
             {/* Right Column - Product grid */}
             <section className="flex-1 min-w-0">
-              <ProductGrid products={filteredSarees} />
+              <SelectionToolbar visibleIds={filteredSarees.map((p) => p.display_id)} scope="public" />
+              <ProductGrid products={filteredSarees} showCheckboxes={true} scope="public" />
             </section>
           </div>
         </div>

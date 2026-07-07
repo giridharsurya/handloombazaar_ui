@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 // mock data removed; featured products should be fetched from API
 import ProductGrid from "@/components/Product/ProductGrid";
+import SelectionToolbar from "@/components/Product/SelectionToolbar";
 import SareesFilter, { FilterState } from "@/components/Filters/SareesFilter";
 import FilterHeader from "@/components/FilterHeader/FilterHeader";
 
@@ -93,7 +94,8 @@ export default function FeaturedPage() {
             )}
 
             <section className="flex-1 min-w-0">
-              <ProductGrid products={filteredFeatured} />
+              <SelectionToolbar visibleIds={filteredFeatured.map((p) => p.display_id)} scope="public" />
+              <ProductGrid products={filteredFeatured} showCheckboxes={true} scope="public" />
             </section>
           </div>
         </div>

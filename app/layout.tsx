@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/Header/Header";
 import { AuthProvider } from "@/lib/AuthContext";
 import { ApiProvider } from "@/lib/ApiProvider";
+import { ProductSelectionProvider } from "@/lib/productSelection";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,9 +35,11 @@ export default function RootLayout({
         <ApiProvider>
           <AuthProvider>
             <Header />
-            <div style={{ paddingTop: "var(--app-header-height, 120px)" }}>
-              {children}
-            </div>
+            <ProductSelectionProvider>
+              <div style={{ paddingTop: "var(--app-header-height, 120px)" }}>
+                {children}
+              </div>
+            </ProductSelectionProvider>
           </AuthProvider>
         </ApiProvider>
       </body>
