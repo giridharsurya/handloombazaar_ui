@@ -89,6 +89,7 @@ export type ProductListItem = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  attributes?: { definition_id: number; option_id: number }[]; // optional attribute summary added to product list
 };
 
 export type ProductsResponseData = {

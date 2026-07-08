@@ -5,6 +5,8 @@ import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
+import CollectionForm from "@/components/Collections/CollectionForm";
+import VendorCollectionsList from "@/components/Collections/VendorCollectionsList";
 
 export default function ShopDashboard() {
   const { auth, isLoading } = useAuth();
@@ -153,6 +155,19 @@ export default function ShopDashboard() {
               <p className={`text-lg font-semibold ${shopStatus?.approved ? 'text-green-600' : 'text-yellow-600'}`}>
                 {shopStatus?.approved ? "Approved" : "Pending Approval"}
               </p>
+            </div>
+          </div>
+        </div>
+        {/* Collections */}
+        <div className="mt-8 rounded-lg border border-slate-300 bg-white p-6">
+          <h2 className="text-xl font-bold text-slate-900 mb-4">Collections</h2>
+          <p className="text-sm text-slate-600 mb-4">Create and manage vendor-specific collections for your shop.</p>
+          <div className="grid gap-6 sm:grid-cols-2">
+            <div>
+              <CollectionForm mode="create" vendorOnly shopDisplayId={auth?.shop_display_id} onSaved={() => { /* could refresh a list */ }} />
+            </div>
+            <div>
+              <VendorCollectionsList />
             </div>
           </div>
         </div>

@@ -256,6 +256,43 @@ export const api = {
       return res;
     },
   },
+  collections: {
+    async getConstraints(collectionId: number) {
+      const res = await apiFetch(`/api/collections/${collectionId}/constraints`, { requiresAuth: true });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async updateConstraints(collectionId: number, payload: any) {
+      const res = await apiFetch(`/api/collections/${collectionId}/constraints`, { method: "PUT", body: JSON.stringify(payload), requiresAuth: true });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async getProducts(collectionId: number) {
+      const res = await apiFetch(`/api/collections/${collectionId}/products`, { requiresAuth: true });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async addProducts(collectionId: number, productIds: string[]) {
+      const res = await apiFetch(`/api/collections/${collectionId}/add`, { method: "POST", body: JSON.stringify({ product_ids: productIds }), requiresAuth: true });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async removeProducts(collectionId: number, productIds: string[]) {
+      const res = await apiFetch(`/api/collections/${collectionId}/remove`, { method: "POST", body: JSON.stringify({ product_ids: productIds }), requiresAuth: true });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async createCollection(payload: any) {
+      const res = await apiFetch(`/api/collections`, { method: "POST", body: JSON.stringify(payload), requiresAuth: true });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+  },
 };
 
 export default api;

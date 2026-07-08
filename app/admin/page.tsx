@@ -1,6 +1,8 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
+import CollectionForm from "@/components/Collections/CollectionForm";
+import CollectionActions from "@/components/Collections/CollectionActions";
 import { useApi } from "@/lib/ApiProvider";
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
@@ -491,47 +493,15 @@ export default function AdminPage() {
             <h2 className="text-lg font-semibold">Create Collection</h2>
             <p className="mt-1 text-sm text-slate-600">Add a new site-level collection.</p>
 
-            <form className="mt-5 space-y-4" onSubmit={handleCreateCollection}>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="mb-1 block text-sm font-medium" htmlFor="collection-name">
-                    Collection Name
-                  </label>
-                  <input
-                    id="collection-name"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-                    value={collectionName}
-                    onChange={(event) => setCollectionName(event.target.value)}
-                    placeholder="Example: Wedding Silk Specials"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label
-                    className="mb-1 block text-sm font-medium"
-                    htmlFor="collection-description"
-                  >
-                    Description
-                  </label>
-                  <input
-                    id="collection-description"
-                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-slate-500 focus:outline-none"
-                    value={collectionDescription}
-                    onChange={(event) => setCollectionDescription(event.target.value)}
-                    placeholder="Short description (optional)"
-                  />
-                </div>
-              </div>
-
-              <button
-                type="submit"
-                disabled={isSavingCollection}
-                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-slate-700 disabled:cursor-not-allowed disabled:bg-slate-400"
-              >
-                {isSavingCollection ? "Saving..." : "Create Collection"}
-              </button>
-            </form>
+            <div className="mt-5">
+              <CollectionForm
+                mode="create"
+                onSaved={async (res) => {
+                  setCollectionFeedback(res ? "Collection created successfully." : "");
+                  await loadCollections();
+                }}
+              />
+            </div>
 
             {collectionFeedback ? (
               <p className="mt-4 text-sm text-slate-700">{collectionFeedback}</p>
@@ -561,69 +531,19 @@ export default function AdminPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {collections.map((col) =>
+                    {collections.map((col) => (
                       editingCollectionId === col.id ? (
                         <tr key={col.id} className="border-b border-slate-100 bg-slate-50">
-                          <td className="px-3 py-3">
-                            <input
-                              type="text"
-                              className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                              value={editingCollectionData.name}
-                              onChange={(e) =>
-                                setEditingCollectionData((prev) => ({
-                                  ...prev,
-                                  name: e.target.value,
-                                }))
-                              }
+                          <td className="px-3 py-3" colSpan={4}>
+                            <CollectionForm
+                              mode="edit"
+                              initial={col}
+                              onSaved={async () => {
+                                setEditingCollectionId(null);
+                                setCollectionFeedback("Collection updated successfully.");
+                                await loadCollections();
+                              }}
                             />
-                          </td>
-                          <td className="px-3 py-3">
-                            <input
-                              type="text"
-                              className="w-full rounded border border-slate-300 px-2 py-1 text-sm"
-                              value={editingCollectionData.description}
-                              onChange={(e) =>
-                                setEditingCollectionData((prev) => ({
-                                  ...prev,
-                                  description: e.target.value,
-                                }))
-                              }
-                            />
-                          </td>
-                          <td className="px-3 py-3">
-                            <label className="inline-flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={editingCollectionData.is_active}
-                                onChange={(e) =>
-                                    setEditingCollectionData((prev) => ({
-                                    ...prev,
-                                    is_active: e.target.checked,
-                                    }))
-                                }
-                                />
-                              <span className="text-xs">
-                                {`Active`}
-                              </span>
-                            </label>
-                          </td>
-                          <td className="px-3 py-3">
-                            <div className="flex flex-wrap gap-2">
-                              <button
-                                type="button"
-                                onClick={() => handleUpdateCollection(col.id)}
-                                className="rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-500"
-                              >
-                                Save
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setEditingCollectionId(null)}
-                                className="rounded-md bg-slate-400 px-2 py-1 text-xs font-semibold text-white hover:bg-slate-300"
-                              >
-                                Cancel
-                              </button>
-                            </div>
                           </td>
                         </tr>
                       ) : (
@@ -648,27 +568,16 @@ export default function AdminPage() {
                               type="button"
                               onClick={() => {
                                 setEditingCollectionId(col.id);
-                                setEditingCollectionData({
-                                  name: col.name,
-                                  description: col.description || "",
-                                  is_active: col.is_active,
-                                });
                               }}
                               className="rounded-md bg-slate-600 px-2 py-1 text-xs font-semibold text-white hover:bg-slate-500"
                             >
                               Edit
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteCollection(col.id)}
-                              className="rounded-md bg-rose-600 px-2 py-1 text-xs font-semibold text-white hover:bg-rose-500"
-                            >
-                              Delete
-                            </button>
+                            <CollectionActions collectionId={col.id} onDeleted={async () => { setCollectionFeedback("Collection deleted successfully."); await loadCollections(); }} />
                           </td>
                         </tr>
                       )
-                    )}
+                    ))}
                   </tbody>
                 </table>
               </div>

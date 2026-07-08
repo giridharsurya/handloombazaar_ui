@@ -22,39 +22,116 @@ export function ProductActionsProvider({ children }: { children: React.ReactNode
   const selection = useProductSelection();
 
   const applyViewForVendorCollection = (shopId: string | undefined, collectionId: number, mode: "add" | "delete" | "view") => {
-    if (!shopId) {
-      setActionViewIds(null);
-      return;
-    }
-    const raw = localStorage.getItem(`vendor_collection_products:${shopId}:${collectionId}`);
-    const parsed: string[] = raw ? JSON.parse(raw) : [];
-    if (mode === "add") {
-      const ids = allProducts.map((p) => String(p.display_id)).filter((id) => !parsed.includes(id));
-      setActionViewIds(ids);
-    } else if (mode === "delete") {
-      setActionViewIds(parsed);
-    } else {
-      setActionViewIds(null);
-    }
+    (async () => {
+      if (!shopId) {
+        setActionViewIds(null);
+        return;
+      }
+
+      try {
+        const constraints = await api.collections.getConstraints(collectionId);
+        const productsResp = await api.collections.getProducts(collectionId);
+        const existingIds = (productsResp.items || productsResp || []).map((p: any) => String(p.display_id));
+
+        let candidateProducts = [] as any[];
+        if (mode === "add") {
+          candidateProducts = allProducts.filter((p) => !existingIds.includes(String(p.display_id)));
+        } else if (mode === "delete") {
+          candidateProducts = allProducts.filter((p) => existingIds.includes(String(p.display_id)));
+        } else {
+          setActionViewIds(null);
+          return;
+        }
+
+        // apply allowed shops filter
+        if (constraints?.allowed_shop_display_ids && Array.isArray(constraints.allowed_shop_display_ids) && constraints.allowed_shop_display_ids.length > 0) {
+          candidateProducts = candidateProducts.filter((p) => constraints.allowed_shop_display_ids.includes(p.shop_display_id));
+        }
+
+        // apply required attributes filter
+        if (constraints?.required_attributes && Array.isArray(constraints.required_attributes) && constraints.required_attributes.length > 0) {
+          const filtered: any[] = [];
+          const detailCache = new Map<string, any>();
+          for (const p of candidateProducts) {
+            let attrs = p.attributes; // from product list
+            if (!attrs || attrs.length === 0) {
+              try {
+                const detail = await api.products.getProductDetails(String(p.display_id), { authenticated: true });
+                attrs = (detail.product?.attributes || []) as any[];
+                detailCache.set(String(p.display_id), attrs);
+              } catch (e) {
+                attrs = [];
+              }
+            }
+
+            // check all required attribute rules (AND across definitions)
+            let ok = true;
+            for (const rule of constraints.required_attributes) {
+              // rule: { definition_id, option_ids }
+              const match = attrs.find((a: any) => a.definition_id === rule.definition_id && (rule.option_ids ? rule.option_ids.includes(a.option_id) : a.option_id === rule.option_id));
+              if (!match) {
+                ok = false;
+                break;
+              }
+            }
+            if (ok) filtered.push(p);
+          }
+          candidateProducts = filtered;
+        }
+
+        setActionViewIds(candidateProducts.map((p) => String(p.display_id)));
+      } catch (e) {
+        setActionViewIds(null);
+      }
+    })();
   };
 
   const applyViewForSystemCollection = async (collectionId: number, mode: "add" | "delete" | "view") => {
     try {
-      const res = await fetch(`/api/collections/${collectionId}/products`);
-      if (!res.ok) {
+      const constraints = await api.collections.getConstraints(collectionId);
+      const productsResp = await api.collections.getProducts(collectionId);
+      const existingIds = (productsResp.items || productsResp || []).map((p: any) => String(p.display_id));
+
+      let candidateProducts: any[] = [];
+      if (mode === "add") {
+        candidateProducts = allProducts.filter((p) => !existingIds.includes(String(p.display_id)));
+      } else if (mode === "delete") {
+        candidateProducts = allProducts.filter((p) => existingIds.includes(String(p.display_id)));
+      } else {
         setActionViewIds(null);
         return;
       }
-      const data = await res.json();
-      const existingIds = (data.items || data || []).map((p: any) => String(p.display_id));
-      if (mode === "add") {
-        const ids = allProducts.map((p) => String(p.display_id)).filter((id) => !existingIds.includes(id));
-        setActionViewIds(ids);
-      } else if (mode === "delete") {
-        setActionViewIds(existingIds);
-      } else {
-        setActionViewIds(null);
+
+      if (constraints?.allowed_shop_display_ids && Array.isArray(constraints.allowed_shop_display_ids) && constraints.allowed_shop_display_ids.length > 0) {
+        candidateProducts = candidateProducts.filter((p) => constraints.allowed_shop_display_ids.includes(p.shop_display_id));
       }
+
+      if (constraints?.required_attributes && Array.isArray(constraints.required_attributes) && constraints.required_attributes.length > 0) {
+        const filtered: any[] = [];
+        for (const p of candidateProducts) {
+          let attrs = p.attributes;
+          if (!attrs || attrs.length === 0) {
+            try {
+              const detail = await api.products.getProductDetails(String(p.display_id), { authenticated: true });
+              attrs = (detail.product?.attributes || []) as any[];
+            } catch (e) {
+              attrs = [];
+            }
+          }
+          let ok = true;
+          for (const rule of constraints.required_attributes) {
+            const match = attrs.find((a: any) => a.definition_id === rule.definition_id && (rule.option_ids ? rule.option_ids.includes(a.option_id) : a.option_id === rule.option_id));
+            if (!match) {
+              ok = false;
+              break;
+            }
+          }
+          if (ok) filtered.push(p);
+        }
+        candidateProducts = filtered;
+      }
+
+      setActionViewIds(candidateProducts.map((p) => String(p.display_id)));
     } catch (e) {
       setActionViewIds(null);
     }
@@ -67,17 +144,15 @@ export function ProductActionsProvider({ children }: { children: React.ReactNode
 
     if (subtype === "vendor") {
       if (!shopId || !collectionId) return;
-      const key = `vendor_collection_products:${shopId}:${collectionId}`;
-      const raw = localStorage.getItem(key);
-      const existing: string[] = raw ? JSON.parse(raw) : [];
-      if (mode === "add") {
-        const merged = Array.from(new Set([...existing, ...selectedIds]));
-        localStorage.setItem(key, JSON.stringify(merged));
-      } else if (mode === "delete") {
-        const filtered = existing.filter((id) => !selectedIds.includes(id));
-        localStorage.setItem(key, JSON.stringify(filtered));
+      try {
+        if (mode === "add") {
+          await api.collections.addProducts(collectionId, selectedIds);
+        } else if (mode === "delete") {
+          await api.collections.removeProducts(collectionId, selectedIds);
+        }
+      } catch (e) {
+        // ignore for now
       }
-      // clear selection after operation
       selection.clear();
       return;
     }
