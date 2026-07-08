@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useApi } from "@/lib/ApiProvider";
 import { useRouter } from "next/navigation";
 import ShopDetailsPage from "@/components/Shop/ShopDetailsPage";
+import ProductActionsSidebar from "@/components/Product/ProductActionsSidebar";
 import type { ProductListItem, ShopDetail } from "@/types/apiTypes";
 
 export default function VendorPage() {
@@ -78,5 +79,10 @@ export default function VendorPage() {
   }
 
   const scope = shopDisplayId ? `vendor:${shopDisplayId}` : undefined;
-  return <ShopDetailsPage shop={shop} products={products} scope={scope} />;
+  return (
+    <div>
+      <ShopDetailsPage shop={shop} products={products} scope={scope} />
+      <ProductActionsSidebar scope={scope} />
+    </div>
+  );
 }

@@ -11,7 +11,7 @@ type SelectionToolbarProps = {
 
 export default function SelectionToolbar({ visibleIds, scope }: SelectionToolbarProps) {
   const resolvedScope = useSelectionScope(scope);
-  const { count, clear, selectAll } = useProductSelection(resolvedScope);
+  const { selectedIds, count, clear, selectAll } = useProductSelection(resolvedScope);
   const { auth } = useAuth();
 
   const scopeLabel = (() => {
@@ -48,10 +48,12 @@ export default function SelectionToolbar({ visibleIds, scope }: SelectionToolbar
 
       <div className="flex items-center gap-3">
         <div className="text-sm text-gray-600">{/* placeholder for bulk actions */}</div>
+        {/* Collections and other bulk actions are available in the right-hand Actions sidebar */}
         <div className="px-2 py-0.5 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
           {scopeLabel}
         </div>
       </div>
+      {/* modal removed; actions moved to sidebar */}
     </div>
   );
 }

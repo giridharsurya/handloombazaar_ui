@@ -7,6 +7,7 @@ import ProductGrid from "@/components/Product/ProductGrid";
 import SelectionToolbar from "@/components/Product/SelectionToolbar";
 import SareesFilter, { FilterState } from "@/components/Filters/SareesFilter";
 import type { ProductListItem, ShopDetail } from "@/types/apiTypes";
+import { useProductActions } from "@/lib/productActions";
 
 type ShopDetailsPageProps = {
   shop: ShopDetail;
@@ -39,6 +40,15 @@ export default function ShopDetailsPage({ shop, products, scope }: ShopDetailsPa
       }),
     [products, filters]
   );
+
+  const { actionViewIds, setAllProducts } = useProductActions();
+
+  const visibleProducts = actionViewIds ? filteredProducts.filter((p) => actionViewIds.includes(String(p.display_id))) : filteredProducts;
+
+  // keep provider aware of current products
+  useEffect(() => {
+    setAllProducts(filteredProducts);
+  }, [filteredProducts, setAllProducts]);
 
 
   useEffect(() => {
@@ -151,8 +161,9 @@ export default function ShopDetailsPage({ shop, products, scope }: ShopDetailsPa
 
             <section className="flex-1 min-w-0">
               <SelectionToolbar visibleIds={filteredProducts.map((p) => p.display_id)} scope={scope ?? "public"} />
-              <ProductGrid products={filteredProducts} hideShop={true} showCheckboxes={true} scope={scope ?? "public"} />
+              <ProductGrid products={visibleProducts} hideShop={true} showCheckboxes={true} scope={scope ?? "public"} />
             </section>
+            {/* ProductActionsSidebar is rendered at the page level for vendor/admin contexts */}
           </div>
         </div>
       </section>

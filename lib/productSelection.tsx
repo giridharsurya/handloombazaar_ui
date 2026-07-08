@@ -28,73 +28,43 @@ const noop = () => {};
 
 const ProductSelectionContext = createContext<ProductSelectionContextValue | null>(null);
 
-const STORAGE_PREFIX = "product_selection:";
-
-function loadScopeFromStorage(scope: string): string[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_PREFIX + scope);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed as string[];
-  } catch (e) {
-    // ignore
-  }
-  return [];
-}
-
-function saveScopeToStorage(scope: string, ids: string[]) {
-  try {
-    localStorage.setItem(STORAGE_PREFIX + scope, JSON.stringify(ids));
-  } catch (e) {
-    // ignore
-  }
-}
+// Selection is kept in-memory only (no persistent storage)
 
 export function ProductSelectionProvider({ children }: { children: React.ReactNode }) {
-  const [scopes, setScopes] = useState<Record<string, string[]>>(() => {
-    // lazily initialize only public by default
-    if (typeof window === "undefined") return {} as Record<string, string[]>;
-    return { public: loadScopeFromStorage("public") } as Record<string, string[]>;
-  });
+  const [scopes, setScopes] = useState<Record<string, string[]>>(() => ({ public: [] }));
 
   const setScopeIds = useCallback((scope: string, ids: string[]) => {
     setScopes((prev) => {
       const next = { ...prev, [scope]: ids };
       return next;
     });
-    saveScopeToStorage(scope, ids);
   }, []);
 
   const toggleScope = useCallback((id: string, scope: string) => {
     setScopes((prev) => {
-      const current = new Set(prev[scope] ?? loadScopeFromStorage(scope));
+      const current = new Set(prev[scope] ?? []);
       if (current.has(id)) current.delete(id);
       else current.add(id);
       const arr = Array.from(current);
-      saveScopeToStorage(scope, arr);
       return { ...prev, [scope]: arr };
     });
   }, []);
 
   const clearScope = useCallback((scope: string) => {
     setScopes((prev) => ({ ...prev, [scope]: [] }));
-    try {
-      localStorage.removeItem(STORAGE_PREFIX + scope);
-    } catch {}
   }, []);
 
   const selectAllScope = useCallback((ids: string[], scope: string) => {
     setScopes((prev) => ({ ...prev, [scope]: ids }));
-    saveScopeToStorage(scope, ids);
   }, []);
 
   const isSelectedScope = useCallback((id: string, scope: string) => {
-    const arr = scopes[scope] ?? (typeof window !== "undefined" ? loadScopeFromStorage(scope) : []);
+    const arr = scopes[scope] ?? [];
     return arr.includes(id);
   }, [scopes]);
 
   const getSelectedIdsScope = useCallback((scope: string) => {
-    return scopes[scope] ?? (typeof window !== "undefined" ? loadScopeFromStorage(scope) : []);
+    return scopes[scope] ?? [];
   }, [scopes]);
 
   const value = useMemo(
@@ -102,27 +72,12 @@ export function ProductSelectionProvider({ children }: { children: React.ReactNo
     [scopes, toggleScope, clearScope, selectAllScope, isSelectedScope, getSelectedIdsScope]
   );
 
-  // Sync: when provider mounts, ensure scopes loaded from storage
-  useEffect(() => {
-    // nothing — individual access will lazy-load
-  }, []);
-
   // Clear sensitive scopes on logout (keep public scope)
   const { auth } = useAuth();
   useEffect(() => {
     if (!auth) {
-      // user logged out — clear all non-public scopes in memory and storage
-      setScopes({ public: loadScopeFromStorage("public") });
-      try {
-        // remove any keys that start with vendor: or admin
-        Object.keys(localStorage).forEach((k) => {
-          if (k.startsWith(STORAGE_PREFIX) && k !== STORAGE_PREFIX + "public") {
-            localStorage.removeItem(k);
-          }
-        });
-      } catch (e) {
-        // ignore
-      }
+      // user logged out — clear non-public scopes in memory
+      setScopes({ public: [] });
     }
   }, [auth]);
 
