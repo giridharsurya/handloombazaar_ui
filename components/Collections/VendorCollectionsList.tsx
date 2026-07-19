@@ -25,9 +25,8 @@ export default function VendorCollectionsList() {
     if (!shopId) return;
     setLoading(true);
     try {
-      const data = await api.admin.getCollections();
-      const mine = (data || []).filter((c: any) => c.shop_display_id === shopId);
-      setCollections(mine || []);
+      const data = await api.collections.list({ kind: "shop", authenticated: true });
+      setCollections(data || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -48,7 +47,7 @@ export default function VendorCollectionsList() {
   async function openMembers(collectionId: number) {
     setShowMembersFor(collectionId);
     try {
-      const resp = await api.collections.getProducts(collectionId);
+      const resp = await api.collections.getProducts(collectionId, { authenticated: true });
       const existing = ((resp.items || resp || []) as any[]).map((it: any) => String(it.display_id)) as string[];
       setMemberIds(existing);
     } catch (e) {
@@ -59,7 +58,7 @@ export default function VendorCollectionsList() {
   async function saveMembers(collectionId: number) {
     // compute additions/removals relative to server list
     try {
-      const resp = await api.collections.getProducts(collectionId);
+      const resp = await api.collections.getProducts(collectionId, { authenticated: true });
       const existing = ((resp.items || resp || []) as any[]).map((it: any) => String(it.display_id)) as string[];
       const toAdd = memberIds.filter((id) => !existing.includes(id));
       const toRemove = existing.filter((id) => !memberIds.includes(id));
@@ -98,7 +97,7 @@ export default function VendorCollectionsList() {
       {editing && (
         <div className="mt-4 rounded border bg-slate-50 p-4">
           <h4 className="font-semibold">Edit Collection</h4>
-          <CollectionForm mode="edit" initial={editing} onSaved={async (res) => { setEditing(null); await loadCollections(); }} />
+          <CollectionForm mode="edit" initial={editing} showConstraints={false} onSaved={async (res) => { setEditing(null); await loadCollections(); }} />
           <div className="mt-2">
             <button className="px-2 py-1" onClick={() => setEditing(null)}>Cancel</button>
           </div>

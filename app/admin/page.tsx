@@ -3,9 +3,14 @@
 import { FormEvent, useEffect, useState } from "react";
 import CollectionForm from "@/components/Collections/CollectionForm";
 import CollectionActions from "@/components/Collections/CollectionActions";
+import CollectionsList from "@/components/Collections/CollectionsList";
+import BulkCollectionActions from "@/components/Collections/BulkCollectionActions";
 import { useApi } from "@/lib/ApiProvider";
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
+import { Attribute } from "@/types/apiTypes";
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:8000";
 
 type Shop = {
   id: number;
@@ -14,52 +19,6 @@ type Shop = {
   is_active?: boolean;
   created_at?: string;
 };
-
-type Collection = {
-  id: number;
-  name: string;
-  description: string | null;
-  display_id: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-type AttributeOption = {
-  id: number;
-  value: string;
-  display_id: string;
-  created_at: string;
-};
-
-type Attribute = {
-  id: number;
-  name: string;
-  display_id: string;
-  is_filterable: boolean;
-  is_required: boolean;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-  options: AttributeOption[];
-};
-
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:8000";
-
-async function parseApiError(response: Response): Promise<string> {
-  try {
-    const data = (await response.json()) as { detail?: string };
-    if (data?.detail && typeof data.detail === "string") {
-      return data.detail;
-    }
-  } catch {
-    // Ignore JSON parsing errors and fall back to status text.
-  }
-
-  return response.statusText || "Request failed";
-}
-
 export default function AdminPage() {
   const { auth, isLoading } = useAuth();
   const router = useRouter();
@@ -69,19 +28,6 @@ export default function AdminPage() {
   const [pendingShops, setPendingShops] = useState<Shop[]>([]);
   const [isLoadingShops, setIsLoadingShops] = useState<boolean>(false);
 
-  const [collectionName, setCollectionName] = useState<string>("");
-  const [collectionDescription, setCollectionDescription] = useState<string>("");
-  const [collectionFeedback, setCollectionFeedback] = useState<string>("");
-  const [isSavingCollection, setIsSavingCollection] = useState<boolean>(false);
-
-  const [collections, setCollections] = useState<Collection[]>([]);
-  const [isLoadingCollections, setIsLoadingCollections] = useState<boolean>(false);
-  const [editingCollectionId, setEditingCollectionId] = useState<number | null>(null);
-  const [editingCollectionData, setEditingCollectionData] = useState<{
-    name: string;
-    description: string;
-    is_active: boolean;
-  }>({ name: "", description: "", is_active: true });
 
   const [attributeName, setAttributeName] = useState<string>("");
   const [attributeOptionsInput, setAttributeOptionsInput] = useState<string>("");
@@ -92,6 +38,12 @@ export default function AdminPage() {
 
   const [attributes, setAttributes] = useState<Attribute[]>([]);
   const [isLoadingAttributes, setIsLoadingAttributes] = useState<boolean>(false);
+  const [collections, setCollections] = useState<any[]>([]);
+  const [collectionScope, setCollectionScope] = useState<'system' | 'vendor'>('system');
+  const [selectedShopDisplayId, setSelectedShopDisplayId] = useState<string | null>(null);
+  const [isLoadingCollections, setIsLoadingCollections] = useState<boolean>(false);
+  const [collectionsFeedback, setCollectionsFeedback] = useState<string>("");
+  const [editingCollectionId, setEditingCollectionId] = useState<number | null>(null);
   const [editingAttributeId, setEditingAttributeId] = useState<number | null>(null);
   const [editingAttributeData, setEditingAttributeData] = useState<{
     name: string;
@@ -141,21 +93,6 @@ export default function AdminPage() {
         setIsLoadingShops(false);
       }
 
-      // Load collections
-      setIsLoadingCollections(true);
-      try {
-        const data = await api.admin.getCollections();
-        if (cancelled) return;
-        setCollections(data);
-      } catch (error) {
-        if (cancelled) return;
-        const message = error instanceof Error ? error.message : "Failed to load collections";
-        setCollectionFeedback(message);
-      } finally {
-        if (cancelled) return;
-        setIsLoadingCollections(false);
-      }
-
       // Load attributes
       setIsLoadingAttributes(true);
       try {
@@ -170,12 +107,33 @@ export default function AdminPage() {
         if (cancelled) return;
         setIsLoadingAttributes(false);
       }
+      // Load collections
+      try {
+        setIsLoadingCollections(true);
+        const kind = collectionScope === 'system' ? 'system' : 'shop';
+        const cols = await api.collections.list({ authenticated: true, kind, shop_display_id: collectionScope === 'vendor' ? selectedShopDisplayId || undefined : undefined });
+        if (cancelled) return;
+        setCollections(cols || []);
+      } catch (error) {
+        if (cancelled) return;
+        // ignore here, will surface via collectionsFeedback when actions occur
+      } finally {
+        if (cancelled) return;
+        setIsLoadingCollections(false);
+      }
     })();
 
     return () => {
       cancelled = true;
     };
   }, [isLoading, auth, api]);
+
+  // Reload collections whenever scope or selected shop changes
+  useEffect(() => {
+    if (isLoading || !auth || auth.role !== "admin") return;
+    // only load when switching scope or selecting a shop
+    loadCollections();
+  }, [collectionScope, selectedShopDisplayId]);
 
   if (isLoading) {
     return null;
@@ -184,6 +142,8 @@ export default function AdminPage() {
   if (!auth || auth.role !== "admin") {
     return null;
   }
+
+  // Collections scope selector UI will be placed near Collections section
 
   const loadShopsData = async () => {
     setIsLoadingShops(true);
@@ -203,19 +163,20 @@ export default function AdminPage() {
   };
 
   const loadCollections = async () => {
+    setCollectionsFeedback("");
     setIsLoadingCollections(true);
-
     try {
-      const data = await api.admin.getCollections();
-      setCollections(data);
+      const kind = collectionScope === 'system' ? 'system' : 'shop';
+      const cols = await api.collections.list({ authenticated: true, kind, shop_display_id: collectionScope === 'vendor' ? selectedShopDisplayId || undefined : undefined });
+      setCollections(cols || []);
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to load collections";
-      setCollectionFeedback(message);
+      const message = error instanceof Error ? error.message : "Failed to load collections";
+      setCollectionsFeedback(message);
     } finally {
       setIsLoadingCollections(false);
     }
   };
+
 
   const loadAttributes = async () => {
     setIsLoadingAttributes(true);
@@ -234,90 +195,7 @@ export default function AdminPage() {
 
   
 
-  const handleCreateCollection = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setCollectionFeedback("");
 
-    if (!collectionName.trim()) {
-      setCollectionFeedback("Collection name is required.");
-      return;
-    }
-
-    setIsSavingCollection(true);
-
-    try {
-      await api.admin.createCollection({ name: collectionName.trim(), description: collectionDescription.trim() || null });
-      setCollectionName("");
-      setCollectionDescription("");
-      setCollectionFeedback("Collection created successfully.");
-      await loadCollections();
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to create collection";
-      setCollectionFeedback(message);
-    } finally {
-      setIsSavingCollection(false);
-    }
-  };
-
-  const handleUpdateCollection = async (collectionId: number) => {
-    setCollectionFeedback("");
-
-    if (!editingCollectionData.name.trim()) {
-      setCollectionFeedback("Collection name is required.");
-      return;
-    }
-
-    try {
-      await api.admin.updateCollection(collectionId, {
-        name: editingCollectionData.name.trim(),
-        description: editingCollectionData.description.trim() || null,
-        is_active: editingCollectionData.is_active,
-      });
-
-      setEditingCollectionId(null);
-      setCollectionFeedback("Collection updated successfully.");
-      await loadCollections();
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to update collection";
-      setCollectionFeedback(message);
-    }
-  };
-
-  const handleToggleCollectionActive = async (
-    collectionId: number,
-    currentActive: boolean
-  ) => {
-    setCollectionFeedback("");
-
-    try {
-      await api.admin.updateCollection(collectionId, { is_active: !currentActive });
-      await loadCollections();
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to toggle collection status";
-      setCollectionFeedback(message);
-    }
-  };
-
-  const handleDeleteCollection = async (collectionId: number) => {
-    setCollectionFeedback("");
-
-    if (!confirm("Are you sure you want to delete this collection? This cannot be undone.")) {
-      return;
-    }
-
-    try {
-      await api.admin.deleteCollection(collectionId);
-      setCollectionFeedback("Collection deleted successfully.");
-      await loadCollections();
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to delete collection";
-      setCollectionFeedback(message);
-    }
-  };
 
   const handleCreateAttribute = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -448,7 +326,7 @@ export default function AdminPage() {
     }
 
     try {
-      await api.admin.updateAttribute(attributeId, { is_active: false });
+      await api.admin.deleteAttribute(attributeId);
       setAttributeFeedback("Attribute and all associated data deleted successfully.");
       await loadAttributes();
     } catch (error) {
@@ -487,104 +365,57 @@ export default function AdminPage() {
           </p>
         </header>
 
-        {/* Collections Section */}
+        {/* Collections Section - delegated to collection components */}
         <section className="mb-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="mb-6">
-            <h2 className="text-lg font-semibold">Create Collection</h2>
-            <p className="mt-1 text-sm text-slate-600">Add a new site-level collection.</p>
+            <h2 className="text-lg font-semibold">Collections</h2>
+            <p className="mt-1 text-sm text-slate-600">Manage system and shop collections. Use the components below to create, edit, view constraints, and perform bulk actions.</p>
 
-            <div className="mt-5">
-              <CollectionForm
-                mode="create"
-                onSaved={async (res) => {
-                  setCollectionFeedback(res ? "Collection created successfully." : "");
-                  await loadCollections();
-                }}
-              />
-            </div>
+            
 
-            {collectionFeedback ? (
-              <p className="mt-4 text-sm text-slate-700">{collectionFeedback}</p>
-            ) : null}
-          </div>
-
-          {/* Collections Table */}
-          <div className="border-t border-slate-200 pt-6">
-            <div className="mb-4 flex items-center justify-between">
-              <h3 className="text-base font-semibold">Existing Collections</h3>
-              {isLoadingCollections ? (
-                <span className="text-sm text-slate-600">Loading...</span>
-              ) : (
-                <span className="text-sm text-slate-600">{collections.length} total</span>
-              )}
-            </div>
-
-            {collections.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-slate-200 text-slate-600">
-                      <th className="px-3 py-2 font-medium">Name</th>
-                      <th className="px-3 py-2 font-medium">Description</th>
-                      <th className="px-3 py-2 font-medium">Status</th>
-                      <th className="px-3 py-2 font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {collections.map((col) => (
-                      editingCollectionId === col.id ? (
-                        <tr key={col.id} className="border-b border-slate-100 bg-slate-50">
-                          <td className="px-3 py-3" colSpan={4}>
-                            <CollectionForm
-                              mode="edit"
-                              initial={col}
-                              onSaved={async () => {
-                                setEditingCollectionId(null);
-                                setCollectionFeedback("Collection updated successfully.");
-                                await loadCollections();
-                              }}
-                            />
-                          </td>
-                        </tr>
-                      ) : (
-                        <tr key={col.id} className="border-b border-slate-100">
-                          <td className="px-3 py-3">{col.name}</td>
-                          <td className="px-3 py-3 text-slate-600">
-                            {col.description || "-"}
-                          </td>
-                          <td className="px-3 py-3">
-                            <span
-                              className={`inline-block rounded-full px-2 py-1 text-xs font-semibold ${
-                                col.is_active
-                                  ? "bg-emerald-100 text-emerald-700"
-                                  : "bg-slate-100 text-slate-700"
-                              }`}
-                            >
-                              {col.is_active ? "Active" : "Inactive"}
-                            </span>
-                          </td>
-                          <td className="px-3 py-3">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setEditingCollectionId(col.id);
-                              }}
-                              className="rounded-md bg-slate-600 px-2 py-1 text-xs font-semibold text-white hover:bg-slate-500"
-                            >
-                              Edit
-                            </button>
-                            <CollectionActions collectionId={col.id} onDeleted={async () => { setCollectionFeedback("Collection deleted successfully."); await loadCollections(); }} />
-                          </td>
-                        </tr>
-                      )
-                    ))}
-                  </tbody>
-                </table>
+            <div className="mt-5 grid gap-6 sm:grid-cols-2">
+              <div className="rounded border border-slate-200 bg-white p-4">
+                <h3 className="mb-3 text-sm font-semibold">Create Collection</h3>
+                <CollectionForm mode="create" onSaved={async () => { setCollectionsFeedback("Collection created."); await loadCollections(); }} />
+                {collectionsFeedback ? <p className="mt-2 text-sm text-rose-600">{collectionsFeedback}</p> : null}
               </div>
-            ) : (
-              <p className="text-sm text-slate-600">No collections found.</p>
-            )}
+              <div className="rounded border border-slate-200 bg-white p-4">
+                <h3 className="mb-3 text-sm font-semibold">Collections</h3>
+                <div className="mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <label className="text-sm text-slate-600">Scope</label>
+                    <select className="rounded border border-slate-300 px-2 py-1 text-sm" value={collectionScope} onChange={(e) => { setCollectionScope(e.target.value as any); }}>
+                      <option value="system">System</option>
+                      <option value="vendor">Vendor</option>
+                    </select>
+                    {collectionScope === 'vendor' && (
+                      <div className="ml-3">
+                        <label className="text-sm text-slate-600">Shop</label>
+                        <select className="rounded border border-slate-300 px-2 py-1 text-sm ml-2" value={selectedShopDisplayId || ''} onChange={(e) => setSelectedShopDisplayId(e.target.value || null)}>
+                          <option value="">-- select shop --</option>
+                          {isLoadingShops ? <option>Loading...</option> : shops.map((s) => (
+                            <option key={s.display_id || s.id} value={s.display_id}>{s.name} ({s.display_id})</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <CollectionsList
+                  collections={collections}
+                  editingCollectionId={editingCollectionId}
+                    scope={collectionScope}
+                    shopDisplayId={collectionScope === 'vendor' ? selectedShopDisplayId || undefined : undefined}
+                  onEdit={(col) => setEditingCollectionId(col.id)}
+                  onCancelEdit={() => setEditingCollectionId(null)}
+                  onSaved={async () => { setEditingCollectionId(null); await loadCollections(); }}
+                  onDeleted={async (id) => { await loadCollections(); }}
+                />
+              </div>
+            </div>
           </div>
+
+          {/* single collections list is shown in the right-hand box above */}
         </section>
 
         {/* Attributes Section */}

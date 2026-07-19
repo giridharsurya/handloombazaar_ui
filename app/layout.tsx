@@ -6,6 +6,8 @@ import { AuthProvider } from "@/lib/AuthContext";
 import { ApiProvider } from "@/lib/ApiProvider";
 import { ProductSelectionProvider } from "@/lib/productSelection";
 import { ProductActionsProvider } from "@/lib/productActions";
+import ApiLoadingProvider from "@/lib/LoadingProvider";
+import GlobalLoader from "@/components/GlobalLoader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -35,7 +37,9 @@ export default function RootLayout({
       <body className="min-h-full overflow-x-hidden">
         <ApiProvider>
           <AuthProvider>
-            <Header />
+            <ApiLoadingProvider>
+              <Header />
+              <GlobalLoader />
             <ProductSelectionProvider>
               <ProductActionsProvider>
                 <div style={{ paddingTop: "var(--app-header-height, 120px)" }}>
@@ -43,6 +47,7 @@ export default function RootLayout({
                 </div>
               </ProductActionsProvider>
             </ProductSelectionProvider>
+            </ApiLoadingProvider>
           </AuthProvider>
         </ApiProvider>
       </body>

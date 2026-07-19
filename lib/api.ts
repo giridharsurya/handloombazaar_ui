@@ -157,14 +157,14 @@ export const api = {
     },
 
     async getCollections(): Promise<Collection[]> {
-      const res = await apiFetch(`/api/admin/collections`, { cache: "no-store", requiresAuth: true });
+      const res = await apiFetch(`/api/collections?kind=system`, { cache: "no-store", requiresAuth: true });
       if (!res.ok) throw new Error(await parseError(res));
       const data = await res.json();
       return Array.isArray(data.items) ? data.items : data;
     },
 
     async createCollection(payload: { name: string; description?: string | null }) {
-      const res = await apiFetch(`/api/admin/collections`, {
+      const res = await apiFetch(`/api/collections/create`, {
         method: "POST",
         body: JSON.stringify(payload),
         requiresAuth: true,
@@ -174,7 +174,7 @@ export const api = {
     },
 
     async updateCollection(collectionId: number, payload: any) {
-      const res = await apiFetch(`/api/admin/collections/${collectionId}`, {
+      const res = await apiFetch(`/api/collections/${collectionId}/update`, {
         method: "PUT",
         body: JSON.stringify(payload),
         requiresAuth: true,
@@ -184,7 +184,7 @@ export const api = {
     },
 
     async deleteCollection(collectionId: number) {
-      const res = await apiFetch(`/api/admin/collections/${collectionId}`, { method: "DELETE", requiresAuth: true });
+      const res = await apiFetch(`/api/collections/${collectionId}/delete`, { method: "DELETE", requiresAuth: true });
       if (!res.ok) throw new Error(await parseError(res));
       return res;
     },
@@ -247,6 +247,12 @@ export const api = {
       return res;
     },
 
+    async deleteAttribute(attributeId: number) {
+      const res = await apiFetch(`/api/admin/attributes/${attributeId}`, { method: "DELETE", requiresAuth: true });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res;
+    },
+
     async shopDecision(shopId: number, action: "approve" | "reject") {
       const res = await apiFetch(`/api/admin/shops/${shopId}/${action}`, {
         method: "POST",
@@ -257,6 +263,17 @@ export const api = {
     },
   },
   collections: {
+    async list(params: { kind?: "system" | "shop"; shop_display_id?: string; authenticated?: boolean } = {}) {
+      const { authenticated, shop_display_id, kind } = params;
+      const qs = new URLSearchParams();
+      if (kind) qs.append("kind", kind);
+      if (shop_display_id) qs.append("shop_display_id", shop_display_id);
+
+      const res = await apiFetch(`/api/collections?${qs.toString()}`, { requiresAuth: !!authenticated });
+      if (!res.ok) throw new Error(await parseError(res));
+      const data = await res.json();
+      return Array.isArray(data.items) ? data.items : data;
+    },
     async getConstraints(collectionId: number) {
       const res = await apiFetch(`/api/collections/${collectionId}/constraints`, { requiresAuth: true });
       if (!res.ok) throw new Error(await parseError(res));
@@ -269,28 +286,39 @@ export const api = {
       return res.json();
     },
 
-    async getProducts(collectionId: number) {
-      const res = await apiFetch(`/api/collections/${collectionId}/products`, { requiresAuth: true });
+    async getProducts(collectionId: number, opts: { authenticated?: boolean } = {}) {
+      const { authenticated } = opts;
+      const res = await apiFetch(`/api/collections/${collectionId}/products`, { requiresAuth: !!authenticated });
       if (!res.ok) throw new Error(await parseError(res));
       return res.json();
     },
 
     async addProducts(collectionId: number, productIds: string[]) {
-      const res = await apiFetch(`/api/collections/${collectionId}/add`, { method: "POST", body: JSON.stringify({ product_ids: productIds }), requiresAuth: true });
+      const res = await apiFetch(`/api/collections/${collectionId}/add`, { method: "POST", body: JSON.stringify({ product_display_ids: productIds }), requiresAuth: true });
       if (!res.ok) throw new Error(await parseError(res));
       return res.json();
     },
 
     async removeProducts(collectionId: number, productIds: string[]) {
-      const res = await apiFetch(`/api/collections/${collectionId}/remove`, { method: "POST", body: JSON.stringify({ product_ids: productIds }), requiresAuth: true });
+      const res = await apiFetch(`/api/collections/${collectionId}/remove`, { method: "POST", body: JSON.stringify({ product_display_ids: productIds }), requiresAuth: true });
       if (!res.ok) throw new Error(await parseError(res));
       return res.json();
     },
 
     async createCollection(payload: any) {
-      const res = await apiFetch(`/api/collections`, { method: "POST", body: JSON.stringify(payload), requiresAuth: true });
+      const res = await apiFetch(`/api/collections/create`, { method: "POST", body: JSON.stringify(payload), requiresAuth: true });
       if (!res.ok) throw new Error(await parseError(res));
       return res.json();
+    },
+    async updateCollection(collectionId: number, payload: any) {
+      const res = await apiFetch(`/api/collections/${collectionId}/update`, { method: "PUT", body: JSON.stringify(payload), requiresAuth: true });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+    async deleteCollection(collectionId: number) {
+      const res = await apiFetch(`/api/collections/${collectionId}/delete`, { method: "DELETE", requiresAuth: true });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res;
     },
   },
 };

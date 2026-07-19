@@ -17,6 +17,7 @@ export default function AttributeConstraintEditor({ value, onChange, showAllowed
   const [loadingShops, setLoadingShops] = React.useState(false);
   const [open, setOpen] = React.useState(false);
   const dropRef = React.useRef<HTMLDivElement | null>(null);
+  // removed skipInitialOnChange in favor of emitting only when parsed differs from incoming `value`
 
   React.useEffect(() => {
     (async () => {
@@ -33,7 +34,11 @@ export default function AttributeConstraintEditor({ value, onChange, showAllowed
         setLoadingShops(true);
         try {
           const s = await api.admin.getShops();
-          setShops(Array.isArray(s) ? s : []);
+          const normalized = (Array.isArray(s) ? s : []).map((sh: any) => ({
+            ...sh,
+            display_id: sh.display_id || sh.displayId || (sh.id ? String(sh.id) : undefined),
+          }));
+          setShops(normalized);
         } catch (e) {
           setShops([]);
         } finally {
@@ -42,6 +47,22 @@ export default function AttributeConstraintEditor({ value, onChange, showAllowed
       })();
     }
   }, [showAllowedShops]);
+
+  // sync when `value` prop or `shops` list changes (normalize numeric ids to display_id)
+  React.useEffect(() => {
+    const incomingAllowed = (value?.allowed_shop_display_ids || []) as string[] || [];
+    // try to map numeric ids to shop.display_id when shops are loaded
+    const normalized = incomingAllowed.map((id) => {
+      // if id already looks like a display id (contains non-digit) keep
+      if (typeof id === 'string' && /\D/.test(id)) return id;
+      // otherwise try to find shop by numeric id
+      const s = shops.find((x) => String(x.id) === String(id));
+      if (s && (s.display_id || s.displayId)) return s.display_id || s.displayId;
+      return String(id);
+    });
+    setAllowedShops(normalized);
+    setRequiredAttributes(value?.required_attributes || []);
+  }, [value, shops]);
 
   React.useEffect(() => {
     function handleClick(e: MouseEvent) {
@@ -58,7 +79,17 @@ export default function AttributeConstraintEditor({ value, onChange, showAllowed
       allowed_shop_display_ids: Array.isArray(allowedShops) ? allowedShops : (allowedShops ? String(allowedShops).split(",").map((s) => s.trim()).filter(Boolean) : []),
       required_attributes: requiredAttributes,
     } as any;
-    onChange?.(parsed);
+    // only notify parent if parsed differs from incoming `value` to avoid echoing identical data
+    try {
+      const incoming = value || {};
+      const parsedNormalized = JSON.stringify(parsed || {});
+      const incomingNormalized = JSON.stringify(incoming || {});
+      if (parsedNormalized !== incomingNormalized) {
+        onChange?.(parsed);
+      }
+    } catch (err) {
+      onChange?.(parsed);
+    }
   }, [allowedShops, requiredAttributes]);
 
   return (
@@ -81,7 +112,7 @@ export default function AttributeConstraintEditor({ value, onChange, showAllowed
                   {allowedShops.length === 0 ? <span className="text-slate-400">Select shops...</span> : (
                     <div className="flex flex-wrap gap-2">
                       {allowedShops.map((id) => {
-                        const s = shops.find((x) => (x.display_id || x.displayId) === id || String(x.id) === id);
+                        const s = shops.find((x) => (x.display_id || x.displayId) === id);
                         return (
                           <span key={id} className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-800">
                             <span>{s ? s.name : id}</span>
@@ -98,7 +129,8 @@ export default function AttributeConstraintEditor({ value, onChange, showAllowed
               {open && (
                 <div ref={dropRef} className="absolute z-40 mt-1 max-h-48 w-full overflow-auto rounded border border-slate-200 bg-white shadow-sm">
                   {shops.map((s) => {
-                    const val = s.display_id || s.displayId || String(s.id);
+                    const val = s.display_id || s.displayId;
+                    if (!val) return null;
                     const selected = allowedShops.includes(val);
                     return (
                       <div key={val} className={`flex items-center justify-between gap-3 px-3 py-2 hover:bg-slate-50 ${selected ? 'bg-emerald-50' : ''}`}> 

@@ -23,26 +23,26 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
   useEffect(() => {
     const loadSystem = async () => {
       try {
-        const data = await api.admin.getCollections();
+        const data = await api.collections.list({ kind: "system" });
         setCollections(data || []);
       } catch (e) {
         setCollections([]);
       }
     };
 
-    const loadVendor = () => {
+    const loadVendor = async () => {
       if (!shopId) return setVendorCollections([]);
       try {
-        const raw = localStorage.getItem(`vendor_collections:${shopId}`);
-        const parsed = raw ? JSON.parse(raw) : [];
-        setVendorCollections(parsed);
+        const data = await api.collections.list({ kind: "shop", shop_display_id: shopId });
+        setVendorCollections(data || []);
       } catch (e) {
         setVendorCollections([]);
       }
     };
 
     loadSystem();
-    loadVendor();
+    // invoke vendor loader
+    (async () => { await loadVendor(); })();
   }, [shopId]);
 
   // compute visible ids based on selection in sidebar
@@ -60,8 +60,8 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
     await confirmAction({ subtype, shopId, collectionId: selectedCollectionId ?? undefined, mode: passMode as any });
     // refresh vendor collections listing
     try {
-      const vraw = localStorage.getItem(`vendor_collections:${shopId}`);
-      setVendorCollections(vraw ? JSON.parse(vraw) : []);
+      const data = await api.collections.list({ shop_display_id: shopId });
+      setVendorCollections(data || []);
     } catch (e) {}
   };
 

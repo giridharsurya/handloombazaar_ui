@@ -12,7 +12,9 @@ type Props = {
   onSaved?: (c: any) => void;
 };
 
-export default function CollectionForm({ mode = "create", initial, vendorOnly = false, shopDisplayId, onSaved }: Props) {
+type PropsExt = Props & { showConstraints?: boolean };
+
+export default function CollectionForm({ mode = "create", initial, vendorOnly = false, shopDisplayId, onSaved, showConstraints = true }: PropsExt) {
   const [name, setName] = React.useState(initial?.name || "");
   const [description, setDescription] = React.useState(initial?.description || "");
   const [scope, setScope] = React.useState<"system" | "vendor">(initial?.shop_display_id ? "vendor" : "system");
@@ -53,26 +55,36 @@ export default function CollectionForm({ mode = "create", initial, vendorOnly = 
     setLoading(true);
     try {
       const payload: any = { name, description };
+      // map UI scope to backend kind ('system' or 'shop')
+      payload.kind = scope === "system" ? "system" : "shop";
       if (scope === "vendor") payload.shop_display_id = shopId || shopDisplayId;
+
+      // include allowed shop display ids from constraints when present
+      if (constraints && Array.isArray(constraints.allowed_shop_display_ids) && constraints.allowed_shop_display_ids.length > 0) {
+        payload.allowed_shop_display_ids = constraints.allowed_shop_display_ids;
+      }
 
       // create or update metadata
       let res: any;
       if (mode === "create") {
         res = await api.collections.createCollection(payload);
       } else if (mode === "edit" && initial?.id) {
-        // update via admin endpoint for collection metadata
-        res = await api.admin.updateCollection(initial.id, payload);
+        // update via unified collections API - backend RBAC will enforce permissions
+        res = await api.collections.updateCollection(initial.id, payload);
       }
 
+      // normalize created/updated collection object
+      const created = (res && (res.collection || res)) || null;
+
       // update constraints if present
-      if (res && constraints) {
-        const collectionId = res.id || initial?.id;
+      if (created && constraints) {
+        const collectionId = created.id || initial?.id;
         if (collectionId) {
           await api.collections.updateConstraints(collectionId, constraints);
         }
       }
 
-      onSaved?.(res || initial);
+      onSaved?.(created || initial || res);
     } catch (err) {
       console.error(err);
     } finally {
@@ -107,14 +119,18 @@ export default function CollectionForm({ mode = "create", initial, vendorOnly = 
       {!vendorOnly && (
         <div>
           <label className="block text-sm font-medium text-slate-700">Scope</label>
-          <select
-            className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            value={scope}
-            onChange={(e) => setScope(e.target.value as any)}
-          >
-            <option value="system">System collection</option>
-            <option value="vendor">Vendor collection</option>
-          </select>
+          {mode === "edit" ? (
+            <div className="mt-1 text-sm text-slate-900">{scope === "system" ? "System collection" : "Vendor collection"}</div>
+          ) : (
+            <select
+              className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              value={scope}
+              onChange={(e) => setScope(e.target.value as any)}
+            >
+              <option value="system">System collection</option>
+              <option value="vendor">Vendor collection</option>
+            </select>
+          )}
         </div>
       )}
 
@@ -128,27 +144,33 @@ export default function CollectionForm({ mode = "create", initial, vendorOnly = 
           ) : (
             <div>
               <label className="block text-sm font-medium text-slate-700">Select shop</label>
-              <select
-                className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                value={shopId || ""}
-                onChange={(e) => setShopId(e.target.value)}
-              >
-                <option value="">-- select shop --</option>
-                {isLoadingShops ? <option>Loading...</option> : shops.map((s) => (
-                  <option key={s.display_id || s.id} value={s.display_id || s.displayId}>{s.name} ({s.display_id || s.displayId})</option>
-                ))}
-              </select>
+              {mode === "edit" ? (
+                <div className="mt-1 text-sm text-slate-900">{shopId || shopDisplayId || "-"}</div>
+              ) : (
+                <select
+                  className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  value={shopId || ""}
+                  onChange={(e) => setShopId(e.target.value)}
+                >
+                  <option value="">-- select shop --</option>
+                  {isLoadingShops ? <option>Loading...</option> : shops.map((s) => (
+                    <option key={s.display_id || s.id} value={s.display_id}>{s.name} ({s.display_id})</option>
+                  ))}
+                </select>
+              )}
             </div>
           )}
         </div>
       )}
 
-      <div>
-        <label className="block text-sm font-medium text-slate-700">Constraints</label>
-        <div className="mt-2">
-          <AttributeConstraintEditor value={constraints} onChange={setConstraints} showAllowedShops={scope === "system"} />
+      {showConstraints && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700">Constraints</label>
+          <div className="mt-2">
+            <AttributeConstraintEditor value={constraints} onChange={setConstraints} showAllowedShops={scope === "system"} />
+          </div>
         </div>
-      </div>
+      )}
 
       <div className="flex gap-3">
         <button type="submit" disabled={loading} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white">

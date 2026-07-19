@@ -15,7 +15,7 @@ export default function CollectionActions({ collectionId, onDeleted }: Props) {
     if (!confirm("Delete this collection?")) return;
     setLoading(true);
     try {
-      await api.admin.deleteCollection(collectionId);
+      await api.collections.deleteCollection(collectionId);
       onDeleted?.();
     } catch (e) {
       console.error(e);

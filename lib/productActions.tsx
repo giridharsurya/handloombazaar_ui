@@ -30,7 +30,7 @@ export function ProductActionsProvider({ children }: { children: React.ReactNode
 
       try {
         const constraints = await api.collections.getConstraints(collectionId);
-        const productsResp = await api.collections.getProducts(collectionId);
+        const productsResp = await api.collections.getProducts(collectionId, { authenticated: true });
         const existingIds = (productsResp.items || productsResp || []).map((p: any) => String(p.display_id));
 
         let candidateProducts = [] as any[];
@@ -89,7 +89,7 @@ export function ProductActionsProvider({ children }: { children: React.ReactNode
   const applyViewForSystemCollection = async (collectionId: number, mode: "add" | "delete" | "view") => {
     try {
       const constraints = await api.collections.getConstraints(collectionId);
-      const productsResp = await api.collections.getProducts(collectionId);
+      const productsResp = await api.collections.getProducts(collectionId, { authenticated: true });
       const existingIds = (productsResp.items || productsResp || []).map((p: any) => String(p.display_id));
 
       let candidateProducts: any[] = [];
@@ -161,9 +161,9 @@ export function ProductActionsProvider({ children }: { children: React.ReactNode
     try {
       if (!collectionId) return;
       if (mode === "add") {
-        await fetch(`/api/collections/${collectionId}/add`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product_ids: selectedIds }) });
+        await api.collections.addProducts(collectionId, selectedIds);
       } else if (mode === "delete") {
-        await fetch(`/api/collections/${collectionId}/remove`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ product_ids: selectedIds }) });
+        await api.collections.removeProducts(collectionId, selectedIds);
       }
       selection.clear();
     } catch (e) {
