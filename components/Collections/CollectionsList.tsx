@@ -97,7 +97,7 @@ export default function CollectionsList(props: Props) {
                         initial={col}
                             showConstraints={false}
                             vendorOnly={scope === 'vendor'}
-                            shopDisplayId={scope === 'vendor' ? shopDisplayId : undefined}
+                            shopDisplayId={scope === 'vendor' ? (shopDisplayId ?? undefined) : undefined}
                         onSaved={async () => {
                           if (onSaved) onSaved();
                         }}
@@ -182,7 +182,7 @@ export default function CollectionsList(props: Props) {
       {showConstraintsFor ? (
         <div className="mt-4 rounded border border-slate-200 bg-white p-4">
           <h4 className="font-semibold">Edit Constraints</h4>
-          <CollectionConstraintsPanel collectionId={showConstraintsFor} shopDisplayId={scope === 'vendor' ? shopDisplayId : undefined} showAllowedShops={scope !== 'vendor'} onSaved={async () => { setShowConstraintsFor(null); if (onSaved) onSaved(); }} />
+          <CollectionConstraintsPanel collectionId={showConstraintsFor} shopDisplayId={scope === 'vendor' ? (shopDisplayId ?? undefined) : undefined} showAllowedShops={scope !== 'vendor'} onSaved={async () => { setShowConstraintsFor(null); if (onSaved) onSaved(); }} />
         </div>
       ) : null}
     </div>

@@ -15,6 +15,7 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://loc
 type Shop = {
   id: number;
   name: string;
+  display_id?: string;
   email?: string;
   is_active?: boolean;
   created_at?: string;
