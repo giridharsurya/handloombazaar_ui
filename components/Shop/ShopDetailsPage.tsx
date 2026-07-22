@@ -135,7 +135,7 @@ export default function ShopDetailsPage({ shop, products, scope }: ShopDetailsPa
       <section>
         <FilterHeader
           pageTitle={shop.name}
-          productCount={filteredProducts.length}
+          productCount={visibleProducts.length}
           showFiltersToggle={true}
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
@@ -160,7 +160,7 @@ export default function ShopDetailsPage({ shop, products, scope }: ShopDetailsPa
             )}
 
             <section className="flex-1 min-w-0">
-              <SelectionToolbar visibleIds={filteredProducts.map((p) => p.display_id)} scope={scope ?? "public"} />
+              <SelectionToolbar visibleIds={visibleProducts.map((p) => p.display_id)} scope={scope ?? "public"} />
               <ProductGrid products={visibleProducts} hideShop={true} showCheckboxes={true} scope={scope ?? "public"} />
             </section>
             {/* ProductActionsSidebar is rendered at the page level for vendor/admin contexts */}

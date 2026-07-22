@@ -136,6 +136,14 @@ export default function ShopDashboard() {
               </p>
             </div>
           </Link>
+          {/* Collections (vendor) */}
+          <Link href="/vendor/collections">
+            <div className="cursor-pointer rounded-lg border border-slate-300 bg-white p-6 shadow-sm transition hover:shadow-md">
+              <h2 className="text-xl font-bold text-slate-900">Collections</h2>
+              <p className="mt-2 text-slate-600">Create and manage your shop collections</p>
+              <p className="mt-4 text-sm font-semibold text-slate-900 flex items-center">Manage Collections →</p>
+            </div>
+          </Link>
         </div>
 
         {/* Shop Info */}
@@ -158,19 +166,7 @@ export default function ShopDashboard() {
             </div>
           </div>
         </div>
-        {/* Collections */}
-        <div className="mt-8 rounded-lg border border-slate-300 bg-white p-6">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">Collections</h2>
-          <p className="text-sm text-slate-600 mb-4">Create and manage vendor-specific collections for your shop.</p>
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div>
-              <CollectionForm mode="create" vendorOnly shopDisplayId={auth?.shop_display_id} onSaved={() => { /* could refresh a list */ }} />
-            </div>
-            <div>
-              <VendorCollectionsList />
-            </div>
-          </div>
-        </div>
+        {/* Collections moved to dedicated page: /vendor/collections */}
       </div>
     </div>
   );
