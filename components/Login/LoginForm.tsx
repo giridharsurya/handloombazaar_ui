@@ -58,7 +58,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
       } else if (userAuth.role === "admin") {
         router.push("/admin");
       } else if (userAuth.role === "shop_owner") {
-        router.push("/vendor/dashboard");
+        router.push("/vendor");
       } else {
         router.push("/");
       }

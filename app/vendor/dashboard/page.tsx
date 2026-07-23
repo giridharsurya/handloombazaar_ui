@@ -94,23 +94,6 @@ export default function ShopDashboard() {
             </div>
           )}
 
-          {/* Manage Products */}
-          {shopStatus?.approved ?? false ? (
-            <Link href="/vendor/products">
-              <div className="cursor-pointer rounded-lg border border-slate-300 bg-white p-6 shadow-sm transition hover:shadow-md">
-                <h2 className="text-xl font-bold text-slate-900">Manage Products</h2>
-                <p className="mt-2 text-slate-600">View, edit, and manage your existing products</p>
-                <p className="mt-4 text-sm font-semibold text-slate-900 flex items-center">View Products →</p>
-              </div>
-            </Link>
-          ) : (
-            <div className="rounded-lg border border-slate-300 bg-white p-6 opacity-60">
-              <h2 className="text-xl font-bold text-slate-900">Manage Products</h2>
-              <p className="mt-2 text-slate-600">View, edit, and manage your existing products</p>
-              <p className="mt-4 text-sm text-slate-500">Available after approval</p>
-            </div>
-          )}
-
           {/* Shop Settings */}
           <Link href="/vendor">
             <div className="cursor-pointer rounded-lg border border-slate-300 bg-white p-6 shadow-sm transition hover:shadow-md">

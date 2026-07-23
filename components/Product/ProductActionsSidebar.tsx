@@ -31,7 +31,11 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
   useEffect(() => {
     const loadSystem = async () => {
       try {
-        const data = await api.collections.list({ kind: "system" });
+        const data = await api.collections.list({
+          kind: "system",
+          shop_display_id: shopId,
+          authenticated: !!shopId,
+        });
         setCollections(data || []);
       } catch (e) {
         setCollections([]);
@@ -99,6 +103,7 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
         const parts: string[] = [];
         if (res.added) parts.push(`${res.added} added`);
         if (res.removed) parts.push(`${res.removed} removed`);
+        if (res.blocked_by_constraints) parts.push(`${res.blocked_by_constraints} blocked by constraints`);
         setMessage({ type: "success", text: `Products updated: ${parts.join(", ")}` });
       } else {
         setMessage({ type: "success", text: `Action completed` });

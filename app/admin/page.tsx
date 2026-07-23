@@ -27,6 +27,12 @@ const adminSections = [
     cta: "Open Shops",
   },
   {
+    title: "Add Product",
+    description: "Create products for any shop using admin access.",
+    href: "/admin/products/add",
+    cta: "Open Add Product",
+  },
+  {
     title: "Shop Product Manager",
     description: "Operate on products/collections for a selected shop as admin.",
     href: "/admin/shop-products",
