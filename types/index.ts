@@ -30,9 +30,32 @@ export interface Product {
   // Additional detail fields
   description?: string | null;
   stock_quantity?: number;
+  product_group_id?: number | null;
+  group_product_count?: number;
+  video_url?: string | null;
+  images?: string[];
+  shop?: {
+    display_id: string;
+    name: string;
+    shop_logo_url: string;
+    email?: string;
+    phone_number?: string;
+    address?: string;
+    website_url?: string | null;
+    youtube_url?: string | null;
+    instagram_url?: string | null;
+    facebook_url?: string | null;
+  };
   created_at?: string | null;
   updated_at?: string | null;
   category?: string;
+  attributes?: {
+    definition_id: number;
+    name: string;
+    option_id: number;
+    value: string;
+    is_filterable?: boolean;
+  }[];
 }
 
 export interface IconProps {

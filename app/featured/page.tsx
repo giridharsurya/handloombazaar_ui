@@ -6,14 +6,16 @@ import ProductGrid from "@/components/Product/ProductGrid";
 import SelectionToolbar from "@/components/Product/SelectionToolbar";
 import SareesFilter, { FilterState } from "@/components/Filters/SareesFilter";
 import FilterHeader from "@/components/FilterHeader/FilterHeader";
+import { ProductFilterAttribute } from "@/types/apiTypes";
 
 export default function FeaturedPage() {
   const featuredProducts: any[] = [];
 
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 25000],
-    selectedCategories: [],
+    selectedAttributeOptionIds: {},
   });
+  const [filterAttributes] = useState<ProductFilterAttribute[]>([]);
 
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
@@ -55,14 +57,8 @@ export default function FeaturedPage() {
       product.price >= filters.priceRange[0] &&
       product.price <= filters.priceRange[1];
 
-    const categoryMatch =
-      filters.selectedCategories.length === 0 ||
-      filters.selectedCategories.includes(product.category);
-
-    return priceMatch && categoryMatch;
+    return priceMatch;
   });
-
-  const categoryNames: string[] = [];
 
   return (
     <main className="min-h-screen bg-white dark:bg-gray-950">
@@ -87,7 +83,7 @@ export default function FeaturedPage() {
                 }}
               >
                 <SareesFilter
-                  categories={categoryNames}
+                  attributes={filterAttributes}
                   onFilterChange={setFilters}
                 />
               </aside>

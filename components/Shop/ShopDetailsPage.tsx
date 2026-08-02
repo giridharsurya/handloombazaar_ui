@@ -6,8 +6,9 @@ import FilterHeader from "@/components/FilterHeader/FilterHeader";
 import ProductGrid from "@/components/Product/ProductGrid";
 import SelectionToolbar from "@/components/Product/SelectionToolbar";
 import SareesFilter, { FilterState } from "@/components/Filters/SareesFilter";
-import type { ProductListItem, ShopDetail } from "@/types/apiTypes";
+import type { ProductFilterAttribute, ProductListItem, ShopDetail } from "@/types/apiTypes";
 import { useProductActions } from "@/lib/productActions";
+import { useApi } from "@/lib/ApiProvider";
 
 type ShopDetailsPageProps = {
   shop: ShopDetail;
@@ -16,29 +17,62 @@ type ShopDetailsPageProps = {
 };
 
 export default function ShopDetailsPage({ shop, products, scope }: ShopDetailsPageProps) {
+  const [displayProducts, setDisplayProducts] = useState<ProductListItem[]>(products);
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 25000],
-    selectedCategories: [],
+    selectedAttributeOptionIds: {},
   });
 
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
+  const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>([]);
 
-  const categoryNames: string[] = [];
+  const api = useApi();
 
   const filteredProducts = useMemo(
     () =>
-      products.filter((product) => {
+      displayProducts.filter((product) => {
         const priceMatch =
           product.price >= filters.priceRange[0] &&
           product.price <= filters.priceRange[1];
 
-        const categoryMatch = filters.selectedCategories.length === 0;
+        const selectedByAttribute = Object.entries(filters.selectedAttributeOptionIds).filter(([, ids]) => ids.length > 0);
+        const attributeMatch = selectedByAttribute.every(([attrId, selectedOptionIds]) => {
+          const numericAttrId = Number(attrId);
+          if (!Number.isFinite(numericAttrId)) return true;
 
-        return priceMatch && categoryMatch;
+          const selectedAttribute = filterAttributes.find((attr) => Number(attr.id) === numericAttrId);
+          const selectedOptionValues = new Set(
+            (selectedAttribute?.options || [])
+              .filter((opt) => (selectedOptionIds as Array<number | string>).some((selectedId) => Number(selectedId) === Number(opt.id)))
+              .map((opt) => String(opt.value).trim().toLowerCase())
+          );
+
+          const productAttrs = product.attributes || [];
+          const scopedProductAttrs = productAttrs.filter((attr) => Number(attr.definition_id) === numericAttrId);
+          const productOptionIdsForAttr = new Set(
+            scopedProductAttrs.map((attr) => Number(attr.option_id)).filter((id) => Number.isFinite(id))
+          );
+          const productOptionValuesForAttr = new Set(
+            scopedProductAttrs
+              .map((attr) => String(attr.option_value || "").trim().toLowerCase())
+              .filter((value) => value.length > 0)
+          );
+
+          const normalizedSelectedIds = (selectedOptionIds as Array<number | string>)
+            .map((selectedId) => Number(selectedId))
+            .filter((id) => Number.isFinite(id));
+
+          const idMatched = normalizedSelectedIds.some((id) => productOptionIdsForAttr.has(id));
+          if (idMatched) return true;
+          if (selectedOptionValues.size === 0) return false;
+          return Array.from(selectedOptionValues).some((value) => productOptionValuesForAttr.has(value));
+        });
+
+        return priceMatch && attributeMatch;
       }),
-    [products, filters]
+    [displayProducts, filters, filterAttributes]
   );
 
   const { actionViewIds, setAllProducts } = useProductActions();
@@ -49,6 +83,77 @@ export default function ShopDetailsPage({ shop, products, scope }: ShopDetailsPa
   useEffect(() => {
     setAllProducts(filteredProducts);
   }, [filteredProducts, setAllProducts]);
+
+
+  useEffect(() => {
+    let mounted = true;
+
+    const hydrateMissingAttributes = async () => {
+      const productsMissingAttributes = products
+        .filter((product) => !product.attributes || product.attributes.length === 0)
+        .map((product) => product.display_id);
+
+      if (productsMissingAttributes.length === 0) {
+        if (mounted) setDisplayProducts(products);
+        return;
+      }
+
+      const detailRows = await Promise.all(
+        productsMissingAttributes.map(async (displayId) => {
+          try {
+            const detailResponse = await api.products.getProductDetails(displayId, { authenticated: false });
+            return {
+              display_id: displayId,
+              attributes: (detailResponse.product.attributes || []).map((attr) => ({
+                definition_id: attr.definition_id,
+                option_id: attr.option_id,
+                option_value: attr.value,
+              })),
+            };
+          } catch {
+            return { display_id: displayId, attributes: [] as Array<{ definition_id: number; option_id: number; option_value?: string }> };
+          }
+        })
+      );
+
+      const attrsByProductId = new Map(detailRows.map((row) => [row.display_id, row.attributes]));
+      const hydratedProducts = products.map((product) => {
+        const hydratedAttrs = attrsByProductId.get(product.display_id);
+        if (!hydratedAttrs) return product;
+        return {
+          ...product,
+          attributes: hydratedAttrs,
+        };
+      });
+
+      if (mounted) setDisplayProducts(hydratedProducts);
+    };
+
+    hydrateMissingAttributes();
+
+    return () => {
+      mounted = false;
+    };
+  }, [api, products]);
+
+  useEffect(() => {
+    let mounted = true;
+
+    const loadFilterAttributes = async () => {
+      try {
+        const attrs = await api.products.getFilterAttributes();
+        if (mounted) setFilterAttributes(attrs);
+      } catch {
+        if (mounted) setFilterAttributes([]);
+      }
+    };
+
+    loadFilterAttributes();
+
+    return () => {
+      mounted = false;
+    };
+  }, [api]);
 
 
   useEffect(() => {
@@ -153,7 +258,7 @@ export default function ShopDetailsPage({ shop, products, scope }: ShopDetailsPa
                 }}
               >
                 <SareesFilter
-                  categories={categoryNames}
+                  attributes={filterAttributes}
                   onFilterChange={setFilters}
                 />
               </aside>

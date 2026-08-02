@@ -13,6 +13,8 @@ import {
   ProductDetailResponse,
   ProductVariantsResponse,
   ProductListItem,
+  ProductFilterAttribute,
+  ProductUpdateRequest,
   TokenVerifyResponse,
   GetShopStatusRequest,
   ShopStatusResponse,
@@ -111,6 +113,18 @@ export const api = {
       return productResponse.data?.items || [];
     },
 
+    async getFilterAttributes(): Promise<ProductFilterAttribute[]> {
+      const res = await apiFetch(`/api/products/filters/attributes`, { requiresAuth: false });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async getEditableAttributes({ authenticated = false }: { authenticated?: boolean } = {}): Promise<ProductFilterAttribute[]> {
+      const res = await apiFetch(`/api/products/attributes`, { requiresAuth: !!authenticated });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
     async getProductDetails(displayId: string, { authenticated = false }: { authenticated?: boolean } = {}): Promise<ProductDetailResponse> {
       const res = await apiFetch(`/api/products/${encodeURIComponent(displayId)}`, { requiresAuth: !!authenticated });
       if (!res.ok) throw new Error(await parseError(res));
@@ -119,6 +133,17 @@ export const api = {
 
     async getProductVariants(displayId: string, { authenticated = false }: { authenticated?: boolean } = {}): Promise<ProductVariantsResponse> {
       const res = await apiFetch(`/api/products/${encodeURIComponent(displayId)}/variants`, { requiresAuth: !!authenticated });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async updateProduct(displayId: string, payload: ProductUpdateRequest | FormData): Promise<ProductDetailResponse> {
+      const isForm = payload instanceof FormData;
+      const res = await apiFetch(`/api/products/${encodeURIComponent(displayId)}`, {
+        method: "PUT",
+        body: isForm ? (payload as FormData) : JSON.stringify(payload),
+        requiresAuth: true,
+      });
       if (!res.ok) throw new Error(await parseError(res));
       return res.json();
     },

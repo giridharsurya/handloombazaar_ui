@@ -105,7 +105,29 @@ export type ProductListItem = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  attributes?: { definition_id: number; option_id: number }[]; // optional attribute summary added to product list
+  attributes?: { definition_id: number; option_id: number; option_value?: string }[]; // optional attribute summary added to product list
+};
+
+export type ProductFilterAttribute = {
+  id: number;
+  name: string;
+  is_filterable?: boolean;
+  is_required?: boolean;
+  options: { id: number; value: string }[];
+};
+
+export type ProductUpdateRequest = {
+  name?: string;
+  description?: string | null;
+  price?: number;
+  discount_price?: number | null;
+  stock_quantity?: number;
+  video_url?: string | null;
+  product_group_id?: number | null;
+  is_active?: boolean;
+  attributes?: { definition_id: number; option_id: number }[];
+  image_urls?: string[];
+  primary_image_index?: number;
 };
 
 export type ProductsResponseData = {
@@ -134,6 +156,13 @@ export type ShopSummary = {
   display_id: string;
   name: string;
   shop_logo_url: string;
+  email: string;
+  phone_number: string;
+  address: string;
+  website_url?: string | null;
+  youtube_url?: string | null;
+  instagram_url?: string | null;
+  facebook_url?: string | null;
 };
 
 export type GetShopStatusRequest = {
@@ -172,6 +201,10 @@ export type ProductDetail = {
   description?: string | null;
   price: number;
   discount_price?: number | null;
+  stock_quantity: number;
+  product_group_id?: number | null;
+  group_product_count: number;
+  video_url?: string | null;
   created_at: string | null;
   updated_at: string | null;
   is_active: boolean;

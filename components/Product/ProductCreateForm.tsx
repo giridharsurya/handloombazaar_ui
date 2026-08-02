@@ -4,6 +4,7 @@ import React, { useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApi } from "@/lib/ApiProvider";
+import { ProductFilterAttribute } from "@/types/apiTypes";
 
 type ShopOption = {
   display_id: string;
@@ -49,11 +50,41 @@ export default function ProductCreateForm({
 
   const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [primaryImageIndex, setPrimaryImageIndex] = useState<number | null>(null);
+  const [availableAttributes, setAvailableAttributes] = useState<ProductFilterAttribute[]>([]);
+  const [selectedOptionByDefinition, setSelectedOptionByDefinition] = useState<Record<number, number | null>>({});
 
   const effectiveShopDisplayId = useMemo(() => {
     if (allowShopSelect) return formData.selectedShop;
     return fixedShopDisplayId || "";
   }, [allowShopSelect, formData.selectedShop, fixedShopDisplayId]);
+
+  React.useEffect(() => {
+    let mounted = true;
+
+    const loadAttributes = async () => {
+      try {
+        const attrs = await api.products.getFilterAttributes();
+        if (!mounted) return;
+        setAvailableAttributes(attrs);
+        setSelectedOptionByDefinition((prev) => {
+          const next = { ...prev };
+          for (const attr of attrs) {
+            if (!(attr.id in next)) next[attr.id] = null;
+          }
+          return next;
+        });
+      } catch {
+        if (!mounted) return;
+        setAvailableAttributes([]);
+      }
+    };
+
+    loadAttributes();
+
+    return () => {
+      mounted = false;
+    };
+  }, [api]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -118,6 +149,17 @@ export default function ProductCreateForm({
       if (formData.discounted_price) form.append("discounted_price", String(parseFloat(formData.discounted_price)));
       form.append("stock_quantity", String(parseInt(formData.stock_quantity, 10)));
 
+      const selectedAttributes = Object.entries(selectedOptionByDefinition)
+        .filter(([, optionId]) => optionId !== null && optionId !== undefined)
+        .map(([definitionId, optionId]) => ({
+          definition_id: Number(definitionId),
+          option_id: Number(optionId),
+        }));
+
+      if (selectedAttributes.length > 0) {
+        form.append("attributes", JSON.stringify(selectedAttributes));
+      }
+
       const filesInOrder = [...uploadedImages];
       if (primaryImageIndex !== null && primaryImageIndex > 0) {
         const primary = filesInOrder.splice(primaryImageIndex, 1)[0];
@@ -141,6 +183,13 @@ export default function ProductCreateForm({
       });
       setUploadedImages([]);
       setPrimaryImageIndex(null);
+      setSelectedOptionByDefinition((prev) => {
+        const resetMap: Record<number, number | null> = {};
+        Object.keys(prev).forEach((k) => {
+          resetMap[Number(k)] = null;
+        });
+        return resetMap;
+      });
 
       setTimeout(() => {
         router.push(redirectAfterSuccessHref);
@@ -274,6 +323,42 @@ export default function ProductCreateForm({
                 className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
               />
             </div>
+
+            {availableAttributes.length > 0 ? (
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-4">
+                <h3 className="text-sm font-semibold text-slate-900">Product Attributes</h3>
+                <p className="mt-1 text-xs text-slate-600">Select one option for each applicable attribute.</p>
+
+                <div className="mt-4 space-y-4">
+                  {availableAttributes.map((attribute) => {
+                    const selectedOptionId = selectedOptionByDefinition[attribute.id] ?? null;
+                    return (
+                      <div key={attribute.id}>
+                        <label className="block text-sm font-medium text-slate-700">{attribute.name}</label>
+                        <select
+                          value={selectedOptionId ?? ""}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            setSelectedOptionByDefinition((prev) => ({
+                              ...prev,
+                              [attribute.id]: value ? Number(value) : null,
+                            }));
+                          }}
+                          className="mt-1 block w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                        >
+                          <option value="">Select {attribute.name}</option>
+                          {attribute.options.map((option) => (
+                            <option key={option.id} value={option.id}>
+                              {option.value}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : null}
 
             <div>
               <label className="block text-sm font-medium text-slate-700 mb-2">Product Images * (select primary image)</label>
