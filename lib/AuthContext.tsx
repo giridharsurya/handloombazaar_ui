@@ -27,6 +27,10 @@ interface AuthContextType {
     year_established: number;
     address: string;
     phone_number: string;
+    website_url?: string;
+    youtube_url?: string;
+    instagram_url?: string;
+    facebook_url?: string;
     shop_logo_url: string | File;
   }) => Promise<void>;
   logout: () => void;
@@ -114,6 +118,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     year_established: number;
     address: string;
     phone_number: string;
+    website_url?: string;
+    youtube_url?: string;
+    instagram_url?: string;
+    facebook_url?: string;
     shop_logo_url: string | File;
   }) => {
     setError(null);
@@ -129,6 +137,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         form.append("year_established", String(userData.year_established));
         form.append("address", userData.address);
         form.append("phone_number", userData.phone_number);
+        if (userData.website_url) form.append("website_url", userData.website_url);
+        if (userData.youtube_url) form.append("youtube_url", userData.youtube_url);
+        if (userData.instagram_url) form.append("instagram_url", userData.instagram_url);
+        if (userData.facebook_url) form.append("facebook_url", userData.facebook_url);
         form.append("shop_logo", userData.shop_logo_url);
         data = await api.auth.register(form);
       } else {
@@ -140,6 +152,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           year_established: userData.year_established,
           address: userData.address,
           phone_number: userData.phone_number,
+          website_url: userData.website_url,
+          youtube_url: userData.youtube_url,
+          instagram_url: userData.instagram_url,
+          facebook_url: userData.facebook_url,
           shop_logo_url: userData.shop_logo_url,
         };
         data = await api.auth.register(payload);

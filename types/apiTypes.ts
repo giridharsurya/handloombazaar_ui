@@ -27,6 +27,10 @@ export type RegisterRequest = {
   address: string;
   phone_number: string;
   shop_logo_url: string;
+  website_url?: string;
+  youtube_url?: string;
+  instagram_url?: string;
+  facebook_url?: string;
 };
 
 export type RegisterResponse = {
@@ -37,6 +41,18 @@ export type RegisterResponse = {
   token: string;
   approved: boolean;
   message: string;
+};
+
+export type ShopUpdatePayload = {
+  name?: string;
+  email?: string;
+  year_established?: number;
+  address?: string;
+  phone_number?: string;
+  website_url?: string | null;
+  youtube_url?: string | null;
+  instagram_url?: string | null;
+  facebook_url?: string | null;
 };
 
 export type TokenVerifyResponse = {
@@ -181,8 +197,17 @@ export type AdminShop = {
   name: string;
   email: string;
   is_active?: boolean;
+  display_id: string;
+  year_established?: number;
+  address?: string;
+  phone_number?: string;
+  website_url?: string | null;
+  youtube_url?: string | null;
+  instagram_url?: string | null;
+  facebook_url?: string | null;
   approved?: boolean;
   created_at?: string;
+  updated_at?: string;
 };
 
 export type Collection = {

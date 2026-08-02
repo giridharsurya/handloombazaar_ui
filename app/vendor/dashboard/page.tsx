@@ -5,13 +5,15 @@ import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import CollectionForm from "@/components/Collections/CollectionForm";
-import VendorCollectionsList from "@/components/Collections/VendorCollectionsList";
+import ShopEditableFields, { ShopEditableValues } from "@/components/Shop/ShopEditableFields";
 
 export default function ShopDashboard() {
   const { auth, isLoading } = useAuth();
   const router = useRouter();
   const [shopStatus, setShopStatus] = React.useState<{ approved: boolean; name?: string } | null>(null);
+  const [shopForm, setShopForm] = React.useState<ShopEditableValues | null>(null);
+  const [isSavingShop, setIsSavingShop] = React.useState(false);
+  const [shopFormFeedback, setShopFormFeedback] = React.useState<string>("");
 
   React.useEffect(() => {
     if (!isLoading && !auth) {
@@ -38,6 +40,98 @@ export default function ShopDashboard() {
     loadStatus();
   }, [auth]);
 
+  React.useEffect(() => {
+    const loadShopForm = async () => {
+      if (!auth?.shop_display_id) return;
+      try {
+        const detail = await api.shops.getManageDetail({ display_id: auth.shop_display_id });
+        setShopForm({
+          name: detail.name || "",
+          email: detail.email || "",
+          year_established: String(detail.year_established || ""),
+          address: detail.address || "",
+          phone_number: detail.phone_number || "",
+          website_url: detail.website_url || "",
+          youtube_url: detail.youtube_url || "",
+          instagram_url: detail.instagram_url || "",
+          facebook_url: detail.facebook_url || "",
+        });
+      } catch (e) {
+        const message = e instanceof Error ? e.message : "Failed to load shop details";
+        setShopFormFeedback(message);
+      }
+    };
+    loadShopForm();
+  }, [auth?.shop_display_id]);
+
+  const handleShopFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setShopForm((prev) => (prev ? { ...prev, [name]: value } : prev));
+    setShopFormFeedback("");
+  };
+
+  const handleSaveShopDetails = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (!auth?.shop_display_id || !shopForm) return;
+
+    const parsedYear = Number.parseInt(shopForm.year_established, 10);
+    if (!shopForm.name.trim()) {
+      setShopFormFeedback("Shop name is required.");
+      return;
+    }
+    if (!shopForm.email.trim() || !shopForm.email.includes("@")) {
+      setShopFormFeedback("Valid email is required.");
+      return;
+    }
+    if (Number.isNaN(parsedYear) || parsedYear < 1800 || parsedYear > 2100) {
+      setShopFormFeedback("Year established must be between 1800 and 2100.");
+      return;
+    }
+    if (!shopForm.address.trim()) {
+      setShopFormFeedback("Address is required.");
+      return;
+    }
+    if (!shopForm.phone_number.trim()) {
+      setShopFormFeedback("Phone number is required.");
+      return;
+    }
+
+    setIsSavingShop(true);
+    setShopFormFeedback("");
+    try {
+      const updated = await api.shops.update(auth.shop_display_id, {
+        name: shopForm.name.trim(),
+        email: shopForm.email.trim(),
+        year_established: parsedYear,
+        address: shopForm.address.trim(),
+        phone_number: shopForm.phone_number.trim(),
+        website_url: shopForm.website_url.trim() || null,
+        youtube_url: shopForm.youtube_url.trim() || null,
+        instagram_url: shopForm.instagram_url.trim() || null,
+        facebook_url: shopForm.facebook_url.trim() || null,
+      });
+
+      setShopForm({
+        name: updated.name || "",
+        email: updated.email || "",
+        year_established: String(updated.year_established || ""),
+        address: updated.address || "",
+        phone_number: updated.phone_number || "",
+        website_url: updated.website_url || "",
+        youtube_url: updated.youtube_url || "",
+        instagram_url: updated.instagram_url || "",
+        facebook_url: updated.facebook_url || "",
+      });
+      setShopStatus((prev) => ({ approved: prev?.approved ?? false, name: updated.name }));
+      setShopFormFeedback("Shop details updated successfully.");
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to update shop details";
+      setShopFormFeedback(message);
+    } finally {
+      setIsSavingShop(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -61,7 +155,7 @@ export default function ShopDashboard() {
         <div className="mb-8">
           <h1 className="text-4xl font-bold text-slate-900">Shop Dashboard</h1>
           <p className="mt-2 text-lg text-slate-600">
-            Welcome, <strong>{auth.shop_name}</strong>
+            Welcome, <strong>{shopForm?.name || shopStatus?.name || auth.shop_name}</strong>
           </p>
         </div>
 
@@ -95,7 +189,7 @@ export default function ShopDashboard() {
           )}
 
           {/* Shop Settings */}
-          <Link href="/vendor">
+          <Link href="/vendor/settings">
             <div className="cursor-pointer rounded-lg border border-slate-300 bg-white p-6 shadow-sm transition hover:shadow-md">
               <h2 className="text-xl font-bold text-slate-900">Shop Settings</h2>
               <p className="mt-2 text-slate-600">
@@ -149,6 +243,7 @@ export default function ShopDashboard() {
             </div>
           </div>
         </div>
+
         {/* Collections moved to dedicated page: /vendor/collections */}
       </div>
     </div>

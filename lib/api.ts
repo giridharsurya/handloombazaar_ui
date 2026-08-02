@@ -19,6 +19,7 @@ import {
   ListShopsResponse,
   GetShopDetailRequest,
   ShopDetail,
+  ShopUpdatePayload,
 } from "../types/apiTypes";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:8000";
@@ -136,6 +137,31 @@ export const api = {
     },
     async list(): Promise<ListShopsResponse> {
       const res = await apiFetch(`/api/shops`, { requiresAuth: false });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+    async getManageDetail(request: GetShopDetailRequest): Promise<ShopDetail> {
+      const res = await apiFetch(`/api/shops/${encodeURIComponent(request.display_id)}/manage`, { requiresAuth: true });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+    async update(displayId: string, payload: ShopUpdatePayload): Promise<ShopDetail> {
+      const res = await apiFetch(`/api/shops/${encodeURIComponent(displayId)}`, {
+        method: "PUT",
+        body: JSON.stringify(payload),
+        requiresAuth: true,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+    async updateLogo(displayId: string, logoFile: File): Promise<ShopDetail> {
+      const form = new FormData();
+      form.append("shop_logo", logoFile);
+      const res = await apiFetch(`/api/shops/${encodeURIComponent(displayId)}/logo`, {
+        method: "PUT",
+        body: form,
+        requiresAuth: true,
+      });
       if (!res.ok) throw new Error(await parseError(res));
       return res.json();
     },

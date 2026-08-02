@@ -3,6 +3,8 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
+import ShopEditableFields, { ShopEditableValues } from "@/components/Shop/ShopEditableFields";
+import ShopLogoUploadField from "@/components/Shop/ShopLogoUploadField";
 
 interface ShopRegistrationProps {
   onSuccess?: () => void;
@@ -19,7 +21,7 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
   const [localError, setLocalError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    shop_name: "",
+    name: "",
     email: "",
     username: "",
     password: "",
@@ -27,6 +29,10 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
     year_established: "",
     address: "",
     phone_number: "",
+    website_url: "",
+    youtube_url: "",
+    instagram_url: "",
+    facebook_url: "",
     shop_logo: null as File | null,
   });
 
@@ -42,20 +48,13 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
     clearError();
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files && e.target.files[0] ? e.target.files[0] : null;
-    setFormData((prev) => ({ ...prev, shop_logo: file }));
-    setLocalError(null);
-    clearError();
-  };
-
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLocalError(null);
     clearError();
 
     // Validation
-    if (!formData.shop_name.trim()) {
+    if (!formData.name.trim()) {
       setLocalError("Shop name is required");
       return;
     }
@@ -100,13 +99,17 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
     setIsLoading(true);
     try {
       await register({
-        shop_name: formData.shop_name,
+        shop_name: formData.name,
         email: formData.email,
         username: formData.username,
         password: formData.password,
         year_established: parsedYear,
         address: formData.address.trim(),
         phone_number: formData.phone_number.trim(),
+        website_url: formData.website_url.trim() || undefined,
+        youtube_url: formData.youtube_url.trim() || undefined,
+        instagram_url: formData.instagram_url.trim() || undefined,
+        facebook_url: formData.facebook_url.trim() || undefined,
         shop_logo_url: formData.shop_logo as File,
       });
 
@@ -136,37 +139,7 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Shop Name */}
-        <div>
-          <label htmlFor="shop_name" className="block text-sm font-medium text-slate-700">
-            Shop Name *
-          </label>
-          <input
-            type="text"
-            id="shop_name"
-            name="shop_name"
-            value={formData.shop_name}
-            onChange={handleChange}
-            placeholder="Enter your shop name"
-            className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder-slate-400 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-          />
-        </div>
-
-        {/* Email */}
-        <div>
-          <label htmlFor="email" className="block text-sm font-medium text-slate-700">
-            Email *
-          </label>
-          <input
-            type="email"
-            id="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="Enter email"
-            className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder-slate-400 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-          />
-        </div>
+        <ShopEditableFields values={formData as ShopEditableValues} onChange={handleChange} />
 
         {/* Username */}
         <div>
@@ -216,81 +189,20 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
           />
         </div>
 
-        {/* Required Shop Details */}
         <div className="border-t border-slate-200 pt-4">
-          <p className="mb-3 text-sm font-medium text-slate-600">Required Shop Information</p>
+          <p className="mb-3 text-sm font-medium text-slate-600">Account and Branding</p>
 
-          {/* Year Established */}
-          <div>
-            <label htmlFor="year_established" className="block text-sm font-medium text-slate-700">
-              Year Established *
-            </label>
-            <input
-              type="number"
-              id="year_established"
-              name="year_established"
-              value={formData.year_established}
-              onChange={handleChange}
-              placeholder="e.g., 2020"
-              min={1800}
-              max={2100}
-              required
-              className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder-slate-400 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-            />
-          </div>
-
-          {/* Address */}
-          <div className="mt-3">
-            <label htmlFor="address" className="block text-sm font-medium text-slate-700">
-              Address *
-            </label>
-            <textarea
-              id="address"
-              name="address"
-              value={formData.address}
-              onChange={handleChange}
-              placeholder="Shop address"
-              rows={3}
-              required
-              className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder-slate-400 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-            />
-          </div>
-
-          {/* Phone Number */}
-          <div className="mt-3">
-            <label htmlFor="phone_number" className="block text-sm font-medium text-slate-700">
-              Phone Number *
-            </label>
-            <input
-              type="tel"
-              id="phone_number"
-              name="phone_number"
-              value={formData.phone_number}
-              onChange={handleChange}
-              placeholder="Phone number"
-              required
-              className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder-slate-400 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
-            />
-          </div>
-
-          {/* Shop Logo Upload */}
-          <div className="mt-3">
-            <label htmlFor="shop_logo" className="block text-sm font-medium text-slate-700">
-              Shop Logo (image) *
-            </label>
-            <input
-              type="file"
-              id="shop_logo"
-              name="shop_logo"
-              accept="image/*"
-              onChange={handleFileChange}
-              required
-              className="mt-1 block w-full text-sm"
-            />
-            {formData.shop_logo && (
-              <p className="mt-2 text-xs text-slate-600">Selected: {formData.shop_logo.name}</p>
-            )}
-          </div>
+          <ShopLogoUploadField
+            inputId="shop_logo"
+            label="Shop Logo"
+            required
+            selectedFile={formData.shop_logo}
+            onFileChange={(file) => {
+              setFormData((prev) => ({ ...prev, shop_logo: file }));
+              setLocalError(null);
+              clearError();
+            }}
+          />
         </div>
 
         {/* Submit Button */}
