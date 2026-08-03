@@ -137,6 +137,16 @@ export const api = {
       return res.json();
     },
 
+    async updateProductVariants(displayId: string, variantDisplayIds: string[]): Promise<ProductDetailResponse> {
+      const res = await apiFetch(`/api/products/${encodeURIComponent(displayId)}/update-variants`, {
+        method: "POST",
+        body: JSON.stringify({ variant_display_ids: variantDisplayIds }),
+        requiresAuth: true,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
     async updateProduct(displayId: string, payload: ProductUpdateRequest | FormData): Promise<ProductDetailResponse> {
       const isForm = payload instanceof FormData;
       const res = await apiFetch(`/api/products/${encodeURIComponent(displayId)}`, {

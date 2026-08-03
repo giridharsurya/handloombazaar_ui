@@ -6,6 +6,7 @@ import { useApi } from "@/lib/ApiProvider";
 import { useAuth } from "@/lib/AuthContext";
 import ShopDetailsPage from "@/components/Shop/ShopDetailsPage";
 import ProductActionsSidebar from "@/components/Product/ProductActionsSidebar";
+import { VariantSelectionProvider } from "@/lib/VariantSelectionContext";
 import type { ProductListItem, ShopDetail } from "@/types/apiTypes";
 
 type AdminShopOption = {
@@ -136,46 +137,52 @@ export default function AdminShopProductsPage() {
   }
 
   return (
-    <div className="px-4 py-4">
-      <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
-        <h1 className="text-xl font-semibold text-slate-900">Manage Shop Products and Collections</h1>
-        <p className="mt-1 text-sm text-slate-600">
-          Select a shop and manage collection membership as an admin.
-        </p>
+    <VariantSelectionProvider>
+      <div className="px-4 py-4">
+        <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
+          <h1 className="text-xl font-semibold text-slate-900">Manage Shop Products and Collections</h1>
+          <p className="mt-1 text-sm text-slate-600">
+            Select a shop and manage collection membership as an admin.
+          </p>
 
-        <div className="mt-4 flex flex-col gap-2 sm:max-w-md">
-          <label className="text-sm font-medium text-slate-700" htmlFor="admin-shop-selector">
-            Shop
-          </label>
-          <select
-            id="admin-shop-selector"
-            className="rounded border border-slate-300 px-3 py-2 text-sm"
-            value={selectedShopDisplayId}
-            onChange={(e) => setSelectedShopDisplayId(e.target.value)}
-            disabled={loadingShops}
-          >
-            <option value="">Select shop</option>
-            {shops
-              .filter((s) => !!s.display_id)
-              .map((s) => (
-                <option key={s.id} value={s.display_id}>
-                  {s.name} ({s.display_id})
-                </option>
-              ))}
-          </select>
-        </div>
+          <div className="mt-4 flex flex-col gap-2 sm:max-w-md">
+            <label className="text-sm font-medium text-slate-700" htmlFor="admin-shop-selector">
+              Shop
+            </label>
+            <select
+              id="admin-shop-selector"
+              className="rounded border border-slate-300 px-3 py-2 text-sm"
+              value={selectedShopDisplayId}
+              onChange={(e) => setSelectedShopDisplayId(e.target.value)}
+              disabled={loadingShops}
+            >
+              <option value="">Select shop</option>
+              {shops
+                .filter((s) => !!s.display_id)
+                .map((s) => (
+                  <option key={s.id} value={s.display_id}>
+                    {s.name} ({s.display_id})
+                  </option>
+                ))}
+            </select>
+          </div>
 
-        {error ? <p className="mt-3 text-sm text-rose-600">{error}</p> : null}
-      </section>
+          {error ? <p className="mt-3 text-sm text-rose-600">{error}</p> : null}
+        </section>
 
-      {loadingShopData ? <div>Loading selected shop data...</div> : null}
+        {loadingShopData ? <div>Loading selected shop data...</div> : null}
 
-      {!loadingShopData && shop && selectedScope ? (
-        <div>
-          <ShopDetailsPage shop={shop} products={products} scope={selectedScope} />
-          <ProductActionsSidebar scope={selectedScope} />
-        </div>
-      ) : null}
-    </div>
+        {!loadingShopData && shop && selectedScope ? (
+          <div>
+            <ShopDetailsPage 
+              shop={shop} 
+              products={products} 
+              scope={selectedScope}
+              actionsSidebar={<ProductActionsSidebar scope={selectedScope} />}
+            />
+          </div>
+        ) : null}
+      </div>
+    </VariantSelectionProvider>
   );
 }

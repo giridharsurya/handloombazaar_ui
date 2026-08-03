@@ -16,9 +16,12 @@ type ProductProps = {
   onToggle?: (id: string) => void;
   showCheckboxes?: boolean;
   scope?: string;
+  variantMode?: boolean;
+  isMainProduct?: boolean;
+  isVariantProduct?: boolean;
 };
 
-export default function Product({ product, size = "default", hideShop = false, hideCategory = false, selected, onToggle, showCheckboxes = false, scope }: ProductProps) {
+export default function Product({ product, size = "default", hideShop = false, hideCategory = false, selected, onToggle, showCheckboxes = false, scope, variantMode = false, isMainProduct = false, isVariantProduct = false }: ProductProps) {
   const resolvedScope = useSelectionScope(scope);
   const selection = useProductSelection(showCheckboxes ? resolvedScope : undefined);
   const isCompact = size === "compact";
@@ -48,7 +51,13 @@ export default function Product({ product, size = "default", hideShop = false, h
       <Link
         href={`/sarees/${product.display_id}`}
         aria-label={`View ${product.name}`}
-        className={`block bg-white dark:bg-gray-900 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-rose-500 `}
+        className={`block bg-white dark:bg-gray-900 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-rose-500 ${
+          isMainProduct
+            ? "border-4 border-red-500 dark:border-red-400"
+            : isVariantProduct
+            ? "border-4 border-green-500 dark:border-green-400"
+            : "border border-gray-200 dark:border-gray-700"
+        }`}
       >
         {/* Image Container */}
         <div className={`relative bg-yellow-100 overflow-hidden ${isCompact ? "h-40" : "h-64"}`}>

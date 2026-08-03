@@ -9,14 +9,16 @@ import SareesFilter, { FilterState } from "@/components/Filters/SareesFilter";
 import type { ProductFilterAttribute, ProductListItem, ShopDetail } from "@/types/apiTypes";
 import { useProductActions } from "@/lib/productActions";
 import { useApi } from "@/lib/ApiProvider";
+import { useVariantSelection } from "@/lib/VariantSelectionContext";
 
 type ShopDetailsPageProps = {
   shop: ShopDetail;
   products: ProductListItem[];
   scope?: string;
+  actionsSidebar?: React.ReactNode;
 };
 
-export default function ShopDetailsPage({ shop, products, scope }: ShopDetailsPageProps) {
+export default function ShopDetailsPage({ shop, products, scope, actionsSidebar }: ShopDetailsPageProps) {
   const [displayProducts, setDisplayProducts] = useState<ProductListItem[]>(products);
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 25000],
@@ -28,6 +30,7 @@ export default function ShopDetailsPage({ shop, products, scope }: ShopDetailsPa
   const sidebarRef = useRef<HTMLElement | null>(null);
   const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>([]);
 
+  const { isVariantMode, mainProductId, variantProductIds } = useVariantSelection();
   const api = useApi();
 
   const filteredProducts = useMemo(
@@ -266,9 +269,18 @@ export default function ShopDetailsPage({ shop, products, scope }: ShopDetailsPa
 
             <section className="flex-1 min-w-0">
               <SelectionToolbar visibleIds={visibleProducts.map((p) => p.display_id)} scope={scope ?? "public"} />
-              <ProductGrid products={visibleProducts} hideShop={true} showCheckboxes={true} scope={scope ?? "public"} />
+              <ProductGrid 
+                products={visibleProducts} 
+                hideShop={true} 
+                showCheckboxes={true} 
+                scope={scope ?? "public"}
+                variantMode={isVariantMode}
+                mainProductId={mainProductId ?? undefined}
+                variantProductIds={variantProductIds}
+              />
             </section>
-            {/* ProductActionsSidebar is rendered at the page level for vendor/admin contexts */}
+            
+            {actionsSidebar}
           </div>
         </div>
       </section>
