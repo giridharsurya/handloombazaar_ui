@@ -23,6 +23,37 @@ export default function CollectionForm({ mode = "create", initial, vendorOnly = 
   const [loading, setLoading] = React.useState(false);
   const [shops, setShops] = React.useState<any[]>([]);
   const [isLoadingShops, setIsLoadingShops] = React.useState(false);
+  const [isAnnouncement, setIsAnnouncement] = React.useState(false);
+  const [bannerTitle, setBannerTitle] = React.useState(initial?.name || "");
+  const [bannerSubtitle, setBannerSubtitle] = React.useState("");
+  const [bannerBgColor, setBannerBgColor] = React.useState("#F43F5E");
+  const [bannerTextColor, setBannerTextColor] = React.useState("#FFFFFF");
+
+  React.useEffect(() => {
+    if (!(mode === "edit" && initial?.id)) return;
+    let mounted = true;
+
+    (async () => {
+      try {
+        const banner = await api.announcements.getByCollection(initial.id, {
+          shop_display_id: scope === "vendor" ? (shopId || shopDisplayId) : undefined,
+        });
+
+        if (!mounted || !banner) return;
+        setIsAnnouncement(true);
+        setBannerTitle(banner.title || initial?.name || "");
+        setBannerSubtitle(banner.subtitle || "");
+        setBannerBgColor(banner.background_color || "#F43F5E");
+        setBannerTextColor(banner.text_color || "#FFFFFF");
+      } catch {
+        // Ignore missing banner; this simply means the collection is not an announcement.
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [mode, initial?.id, scope, shopId, shopDisplayId]);
 
   React.useEffect(() => {
     if (vendorOnly) setScope("vendor");
@@ -75,12 +106,32 @@ export default function CollectionForm({ mode = "create", initial, vendorOnly = 
 
       // normalize created/updated collection object
       const created = (res && (res.collection || res)) || null;
+      const targetCollectionId = created?.id || initial?.id;
 
       // update constraints if present
       if (created && constraints) {
         const collectionId = created.id || initial?.id;
         if (collectionId) {
           await api.collections.updateConstraints(collectionId, constraints);
+        }
+      }
+
+      // upsert/remove announcement banner linked to the collection
+      if (targetCollectionId) {
+        if (isAnnouncement) {
+          await api.announcements.upsert({
+            collection_id: targetCollectionId,
+            title: (bannerTitle || name).trim() || name.trim(),
+            subtitle: bannerSubtitle.trim() || undefined,
+            background_color: bannerBgColor,
+            text_color: bannerTextColor,
+            is_active: true,
+            shop_display_id: scope === "vendor" ? (shopId || shopDisplayId || undefined) : undefined,
+          });
+        } else {
+          await api.announcements.deleteByCollection(targetCollectionId, {
+            shop_display_id: scope === "vendor" ? (shopId || shopDisplayId || undefined) : undefined,
+          });
         }
       }
 
@@ -171,6 +222,61 @@ export default function CollectionForm({ mode = "create", initial, vendorOnly = 
           </div>
         </div>
       )}
+
+      <div className="rounded-lg border border-slate-200 p-3">
+        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+          <input
+            type="checkbox"
+            checked={isAnnouncement}
+            onChange={(e) => setIsAnnouncement(e.target.checked)}
+          />
+          Show this collection as an announcement banner
+        </label>
+
+        {isAnnouncement ? (
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-slate-700">Banner Text</label>
+              <input
+                className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={bannerTitle}
+                onChange={(e) => setBannerTitle(e.target.value)}
+                placeholder="Flat 10% off on Cotton Sarees"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-sm font-medium text-slate-700">Subtext (optional)</label>
+              <input
+                className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                value={bannerSubtitle}
+                onChange={(e) => setBannerSubtitle(e.target.value)}
+                placeholder="Limited period offer"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Background Color</label>
+              <input
+                type="color"
+                className="mt-1 block h-10 w-full rounded-lg border border-slate-300 px-1"
+                value={bannerBgColor}
+                onChange={(e) => setBannerBgColor(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Text Color</label>
+              <input
+                type="color"
+                className="mt-1 block h-10 w-full rounded-lg border border-slate-300 px-1"
+                value={bannerTextColor}
+                onChange={(e) => setBannerTextColor(e.target.value)}
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
 
       <div className="flex gap-3">
         <button type="submit" disabled={loading} className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white">

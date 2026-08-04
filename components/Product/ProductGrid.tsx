@@ -17,7 +17,7 @@ type ProductGridProps = {
 
 export default function ProductGrid({ products, hideShop = false, hideCategory = false, showCheckboxes = false, scope, variantMode = false, mainProductId, variantProductIds }: ProductGridProps) {
   return (
-    <div className="grid grid-cols-[repeat(auto-fill,minmax(10rem,1fr))] gap-6">
+    <div className="grid grid-cols-[repeat(auto-fill,minmax(12.5rem,1fr))] gap-6">
       {products.map((product) => (
         <ProductCard
           key={product.display_id}

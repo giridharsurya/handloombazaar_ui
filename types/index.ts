@@ -41,6 +41,7 @@ export interface Product {
     email?: string;
     phone_number?: string;
     address?: string;
+    city?: string | null;
     website_url?: string | null;
     youtube_url?: string | null;
     instagram_url?: string | null;

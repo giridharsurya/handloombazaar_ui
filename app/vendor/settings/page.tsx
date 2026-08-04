@@ -36,6 +36,7 @@ export default function VendorSettingsPage() {
           email: detail.email || "",
           year_established: String(detail.year_established || ""),
           address: detail.address || "",
+          city: detail.city || "",
           phone_number: detail.phone_number || "",
           website_url: detail.website_url || "",
           youtube_url: detail.youtube_url || "",
@@ -80,6 +81,10 @@ export default function VendorSettingsPage() {
       setShopFormFeedback("Address is required.");
       return;
     }
+    if (!shopForm.city.trim()) {
+      setShopFormFeedback("City is required.");
+      return;
+    }
     if (!shopForm.phone_number.trim()) {
       setShopFormFeedback("Phone number is required.");
       return;
@@ -94,6 +99,7 @@ export default function VendorSettingsPage() {
         email: shopForm.email.trim(),
         year_established: parsedYear,
         address: shopForm.address.trim(),
+        city: shopForm.city.trim(),
         phone_number: shopForm.phone_number.trim(),
         website_url: shopForm.website_url.trim() || null,
         youtube_url: shopForm.youtube_url.trim() || null,

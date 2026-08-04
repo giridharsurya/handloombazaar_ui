@@ -15,6 +15,10 @@ import {
   ProductListItem,
   ProductFilterAttribute,
   ProductUpdateRequest,
+  BulkUpdateProductAttributesRequest,
+  BulkUpdateProductAttributesResponse,
+  BulkProductActionRequest,
+  BulkProductActionResponse,
   TokenVerifyResponse,
   GetShopStatusRequest,
   ShopStatusResponse,
@@ -22,6 +26,8 @@ import {
   GetShopDetailRequest,
   ShopDetail,
   ShopUpdatePayload,
+  AnnouncementBanner,
+  AnnouncementUpsertRequest,
 } from "../types/apiTypes";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:8000";
@@ -30,7 +36,27 @@ import { apiFetch } from "./apiClient";
 async function parseError(response: Response) {
   try {
     const data = await response.json();
-    return data?.detail || response.statusText || "Request failed";
+    const detail = data?.detail;
+    if (typeof detail === "string" && detail.trim().length > 0) {
+      return detail;
+    }
+    if (Array.isArray(detail)) {
+      return detail
+        .map((item) => {
+          if (typeof item === "string") return item;
+          if (item && typeof item === "object") {
+            const loc = Array.isArray((item as any).loc) ? (item as any).loc.join(".") : "field";
+            const msg = (item as any).msg || JSON.stringify(item);
+            return `${loc}: ${msg}`;
+          }
+          return String(item);
+        })
+        .join("; ");
+    }
+    if (detail && typeof detail === "object") {
+      return JSON.stringify(detail);
+    }
+    return response.statusText || "Request failed";
   } catch {
     return response.statusText || "Request failed";
   }
@@ -141,6 +167,26 @@ export const api = {
       const res = await apiFetch(`/api/products/${encodeURIComponent(displayId)}/update-variants`, {
         method: "POST",
         body: JSON.stringify({ variant_display_ids: variantDisplayIds }),
+        requiresAuth: true,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async bulkUpdateAttributes(payload: BulkUpdateProductAttributesRequest): Promise<BulkUpdateProductAttributesResponse> {
+      const res = await apiFetch(`/api/products/bulk-update-attributes`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        requiresAuth: true,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async bulkProductAction(payload: BulkProductActionRequest): Promise<BulkProductActionResponse> {
+      const res = await apiFetch(`/api/products/bulk-product-action`, {
+        method: "POST",
+        body: JSON.stringify(payload),
         requiresAuth: true,
       });
       if (!res.ok) throw new Error(await parseError(res));
@@ -380,6 +426,51 @@ export const api = {
       const res = await apiFetch(`/api/collections/${collectionId}/delete`, { method: "DELETE", requiresAuth: true });
       if (!res.ok) throw new Error(await parseError(res));
       return res;
+    },
+  },
+
+  announcements: {
+    async list(params: { shop_display_id?: string; include_inactive?: boolean } = {}): Promise<AnnouncementBanner[]> {
+      const qs = new URLSearchParams();
+      if (params.shop_display_id) qs.append("shop_display_id", params.shop_display_id);
+      if (typeof params.include_inactive === "boolean") qs.append("include_inactive", String(params.include_inactive));
+
+      const res = await apiFetch(`/api/announcements?${qs.toString()}`, { requiresAuth: false });
+      if (!res.ok) throw new Error(await parseError(res));
+      const data = await res.json();
+      return Array.isArray(data.items) ? data.items : [];
+    },
+
+    async getByCollection(collectionId: number, params: { shop_display_id?: string } = {}): Promise<AnnouncementBanner | null> {
+      const qs = new URLSearchParams();
+      if (params.shop_display_id) qs.append("shop_display_id", params.shop_display_id);
+
+      const res = await apiFetch(`/api/announcements/by-collection/${collectionId}?${qs.toString()}`, { requiresAuth: true });
+      if (!res.ok) throw new Error(await parseError(res));
+      const data = await res.json();
+      return data?.item || null;
+    },
+
+    async upsert(payload: AnnouncementUpsertRequest): Promise<AnnouncementBanner> {
+      const res = await apiFetch(`/api/announcements/upsert`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        requiresAuth: true,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      const data = await res.json();
+      return data.item;
+    },
+
+    async deleteByCollection(collectionId: number, params: { shop_display_id?: string } = {}): Promise<void> {
+      const qs = new URLSearchParams();
+      if (params.shop_display_id) qs.append("shop_display_id", params.shop_display_id);
+
+      const res = await apiFetch(`/api/announcements/by-collection/${collectionId}?${qs.toString()}`, {
+        method: "DELETE",
+        requiresAuth: true,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
     },
   },
 };

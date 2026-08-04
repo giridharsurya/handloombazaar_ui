@@ -1,6 +1,7 @@
 import React from "react";
 import { notFound } from "next/navigation";
 import ShopDetailsPage from "@/components/Shop/ShopDetailsPage";
+import { VariantSelectionProvider } from "@/lib/VariantSelectionContext";
 import api from "@/lib/api";
 
 type PageProps = {
@@ -15,7 +16,11 @@ export default async function ShopPage({ params }: PageProps) {
   try {
     const shop = await api.shops.getDetail({ display_id: displayId });
     const products = await api.products.getProducts({ page: 1, page_size: 100, shop_display_id: displayId });
-    return <ShopDetailsPage shop={shop} products={products} scope={"public"} />;
+    return (
+      <VariantSelectionProvider>
+        <ShopDetailsPage shop={shop} products={products} scope={"public"} />
+      </VariantSelectionProvider>
+    );
   } catch (e) {
     return notFound();
   }

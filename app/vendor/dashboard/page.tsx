@@ -50,6 +50,7 @@ export default function ShopDashboard() {
           email: detail.email || "",
           year_established: String(detail.year_established || ""),
           address: detail.address || "",
+          city: detail.city || "",
           phone_number: detail.phone_number || "",
           website_url: detail.website_url || "",
           youtube_url: detail.youtube_url || "",
@@ -91,6 +92,10 @@ export default function ShopDashboard() {
       setShopFormFeedback("Address is required.");
       return;
     }
+    if (!shopForm.city.trim()) {
+      setShopFormFeedback("City is required.");
+      return;
+    }
     if (!shopForm.phone_number.trim()) {
       setShopFormFeedback("Phone number is required.");
       return;
@@ -104,6 +109,7 @@ export default function ShopDashboard() {
         email: shopForm.email.trim(),
         year_established: parsedYear,
         address: shopForm.address.trim(),
+        city: shopForm.city.trim(),
         phone_number: shopForm.phone_number.trim(),
         website_url: shopForm.website_url.trim() || null,
         youtube_url: shopForm.youtube_url.trim() || null,
@@ -116,6 +122,7 @@ export default function ShopDashboard() {
         email: updated.email || "",
         year_established: String(updated.year_established || ""),
         address: updated.address || "",
+        city: updated.city || "",
         phone_number: updated.phone_number || "",
         website_url: updated.website_url || "",
         youtube_url: updated.youtube_url || "",
@@ -164,7 +171,7 @@ export default function ShopDashboard() {
           <div className="mb-6 rounded-lg border border-yellow-300 bg-yellow-50 p-4">
             <p className="text-sm text-yellow-800">
               ⏳ <strong>Pending Approval:</strong> Your shop is pending admin approval. Once
-              approved, you'll be able to add products and manage your shop.
+              approved, you&apos;ll be able to add products and manage your shop.
             </p>
           </div>
         )}

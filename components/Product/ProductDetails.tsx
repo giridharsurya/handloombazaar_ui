@@ -26,6 +26,7 @@ export default function ProductDetails({
   const { auth } = useAuth();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [currentProduct, setCurrentProduct] = useState<any>(product);
+  const hasDiscountPrice = currentProduct?.discount_price !== null && currentProduct?.discount_price !== undefined;
 
   const currentShopDisplayId =
     currentProduct?.shop?.display_id ||
@@ -140,6 +141,15 @@ export default function ProductDetails({
             {currentProduct.name}
           </h1>
 
+            <div className="mt-2 flex items-center gap-2">
+              {Number(currentProduct.stock_quantity ?? 0) <= 0 ? (
+                <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">Out of stock</span>
+              ) : null}
+              {currentProduct.is_active === false ? (
+                <span className="rounded bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">Inactive</span>
+              ) : null}
+            </div>
+
           {canEditProduct ? (
             <div className="mt-3">
               <button
@@ -154,13 +164,33 @@ export default function ProductDetails({
 
           <div className="mt-4 flex items-end gap-3">
             <p className="text-xs uppercase tracking-wide text-gray-500 dark:text-gray-400">MRP</p>
-            <p className="text-3xl font-bold text-rose-600">Rs. {currentProduct.price.toLocaleString()}</p>
+            {hasDiscountPrice ? (
+              <>
+                <p className="text-lg text-gray-500 line-through">Rs. {currentProduct.price.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-rose-600">Rs. {Number(currentProduct.discount_price).toLocaleString()}</p>
+              </>
+            ) : (
+              <p className="text-3xl font-bold text-rose-600">Rs. {currentProduct.price.toLocaleString()}</p>
+            )}
             <p className="text-sm text-gray-500 dark:text-gray-400">Inclusive of all taxes</p>
           </div>
 
           <div className="mt-3 text-sm text-gray-700 dark:text-gray-300">
             <span className="font-medium">Stock:</span> {currentProduct.stock_quantity ?? "N/A"}
           </div>
+
+          {currentProduct.video_url ? (
+            <div className="mt-2 text-sm">
+              <a
+                href={String(currentProduct.video_url)}
+                target="_blank"
+                rel="noreferrer"
+                className="font-medium text-rose-600 hover:underline"
+              >
+                Watch product video
+              </a>
+            </div>
+          ) : null}
 
           {topAttributes.length > 0 && (
             <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-700 dark:text-gray-300">

@@ -6,10 +6,13 @@ import ProductGrid from "@/components/Product/ProductGrid";
 import SelectionToolbar from "@/components/Product/SelectionToolbar";
 import SareesFilter, { FilterState } from "@/components/Filters/SareesFilter";
 import FilterHeader from "@/components/FilterHeader/FilterHeader";
+import Pagination from "@/components/Product/Pagination";
 import { ProductFilterAttribute } from "@/types/apiTypes";
 
 export default function FeaturedPage() {
   const featuredProducts: any[] = [];
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
 
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 25000],
@@ -60,6 +63,14 @@ export default function FeaturedPage() {
     return priceMatch;
   });
 
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
+
+  const paginationOffset = (currentPage - 1) * itemsPerPage;
+  const paginatedFeatured = filteredFeatured.slice(paginationOffset, paginationOffset + itemsPerPage);
+
   return (
     <main className="min-h-screen bg-white dark:bg-gray-950">
       <section>
@@ -90,8 +101,9 @@ export default function FeaturedPage() {
             )}
 
             <section className="flex-1 min-w-0">
-              <SelectionToolbar visibleIds={filteredFeatured.map((p) => p.display_id)} scope="public" />
-              <ProductGrid products={filteredFeatured} showCheckboxes={true} scope="public" />
+              <SelectionToolbar visibleIds={paginatedFeatured.map((p) => p.display_id)} scope="public" />
+              <ProductGrid products={paginatedFeatured} showCheckboxes={true} scope="public" />
+              <Pagination currentPage={currentPage} totalItems={filteredFeatured.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
             </section>
           </div>
         </div>

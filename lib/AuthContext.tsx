@@ -26,6 +26,7 @@ interface AuthContextType {
     email: string;
     year_established: number;
     address: string;
+    city: string;
     phone_number: string;
     website_url?: string;
     youtube_url?: string;
@@ -117,6 +118,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     email: string;
     year_established: number;
     address: string;
+    city: string;
     phone_number: string;
     website_url?: string;
     youtube_url?: string;
@@ -136,6 +138,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         form.append("email", userData.email);
         form.append("year_established", String(userData.year_established));
         form.append("address", userData.address);
+        form.append("city", userData.city);
         form.append("phone_number", userData.phone_number);
         if (userData.website_url) form.append("website_url", userData.website_url);
         if (userData.youtube_url) form.append("youtube_url", userData.youtube_url);
@@ -151,6 +154,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           email: userData.email,
           year_established: userData.year_established,
           address: userData.address,
+          city: userData.city,
           phone_number: userData.phone_number,
           website_url: userData.website_url,
           youtube_url: userData.youtube_url,

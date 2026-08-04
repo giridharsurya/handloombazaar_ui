@@ -38,6 +38,24 @@ const adminSections = [
     href: "/admin/shop-products",
     cta: "Open Shop Product Manager",
   },
+  {
+    title: "Announcement Banners",
+    description: "Create, activate/deactivate, and delete system/shop announcement banners.",
+    href: "/admin/announcements",
+    cta: "Open Announcements",
+  },
+  {
+    title: "System Collection Manager",
+    description: "Manage system collection ribbons and jump to product actions for each collection.",
+    href: "/admin/system-collections",
+    cta: "Open System Collections",
+  },
+  {
+    title: "All Products Manager",
+    description: "View and manage all products across all shops. Perform bulk actions on selected products.",
+    href: "/admin/products",
+    cta: "Open Products Manager",
+  },
 ];
 
 export default function AdminPage() {

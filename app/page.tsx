@@ -5,10 +5,11 @@ import ShopRibbon from "@/components/Ribbon/ShopRibbon";
 import FeaturedRibbon from "@/components/Ribbon/FeaturedRibbon";
 import AnnouncementsRibbon from "@/components/Ribbon/AnnouncementsRibbon";
 import api from "@/lib/api";
-import type { ShopSummary } from "@/types/apiTypes";
+import type { AnnouncementBanner, ShopSummary } from "@/types/apiTypes";
 
 export default function Home() {
   const [shops, setShops] = useState<ShopSummary[]>([]);
+  const [announcements, setAnnouncements] = useState<AnnouncementBanner[]>([]);
 
   useEffect(() => {
     let mounted = true;
@@ -29,7 +30,18 @@ export default function Home() {
       }
     };
 
+    const loadAnnouncements = async () => {
+      try {
+        const rows = await api.announcements.list();
+        if (!mounted) return;
+        setAnnouncements(rows || []);
+      } catch (error) {
+        console.error("Failed to load announcements", error);
+      }
+    };
+
     loadShops();
+    loadAnnouncements();
 
     return () => {
       mounted = false;
@@ -41,7 +53,7 @@ export default function Home() {
       <div className="w-full px-4">
         <div className="w-full space-y-4">
           {/* Announcements / Collections ribbon */}
-          <AnnouncementsRibbon />
+          <AnnouncementsRibbon items={announcements} />
 
           <ShopRibbon shops={shops} onShopClick={(shop) => console.log("shop click", shop)} />
 

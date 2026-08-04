@@ -25,6 +25,7 @@ export type RegisterRequest = {
   email: string;
   year_established: number;
   address: string;
+  city: string;
   phone_number: string;
   shop_logo_url: string;
   website_url?: string;
@@ -48,6 +49,7 @@ export type ShopUpdatePayload = {
   email?: string;
   year_established?: number;
   address?: string;
+  city?: string;
   phone_number?: string;
   website_url?: string | null;
   youtube_url?: string | null;
@@ -102,6 +104,7 @@ export type ProductListItem = {
   shop_logo_url: string;
   price: number;
   discount_price: number | null;
+  stock_quantity: number;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -159,6 +162,7 @@ export type ShopSummary = {
   email: string;
   phone_number: string;
   address: string;
+  city?: string | null;
   website_url?: string | null;
   youtube_url?: string | null;
   instagram_url?: string | null;
@@ -183,6 +187,7 @@ export type ShopDetail = ShopStatusResponse & {
   description: string | null;
   email: string;
   address: string;
+  city: string | null;
   phone_number: string;
   year_established: number;
   website_url: string | null;
@@ -225,10 +230,49 @@ export type ProductVariantsResponse = {
   data: ProductListItem[];
 };
 
+export type BulkAttributeUpdateItem = {
+  definition_id: number;
+  option_id?: number;
+  remove?: boolean;
+};
+
+export type BulkUpdateProductAttributesRequest = {
+  product_display_ids: string[];
+  updates: BulkAttributeUpdateItem[];
+};
+
+export type BulkUpdateProductAttributesResponse = {
+  success: boolean;
+  message: string;
+  updated_count: number;
+};
+
+export type BulkProductActionType =
+  | "set_active"
+  | "set_inactive"
+  | "change_price_percent"
+  | "set_discount_percent"
+  | "delete_products"
+  | "set_quantity";
+
+export type BulkProductActionRequest = {
+  product_display_ids: string[];
+  action: BulkProductActionType;
+  percentage?: number;
+  quantity?: number;
+};
+
+export type BulkProductActionResponse = {
+  success: boolean;
+  message: string;
+  affected_count: number;
+};
+
 export type AdminShop = {
   id: number;
   name: string;
   email: string;
+  city?: string | null;
   is_active?: boolean;
   display_id: string;
   year_established?: number;
@@ -251,6 +295,32 @@ export type Collection = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+};
+
+export type AnnouncementBanner = {
+  id: number;
+  display_id: string;
+  title: string;
+  subtitle?: string | null;
+  background_color: string;
+  text_color: string;
+  is_active: boolean;
+  collection_id: number;
+  collection_name?: string;
+  collection_scope?: "system" | "shop";
+  banner_scope?: "system" | "shop";
+  shop_id?: number | null;
+  target?: string;
+};
+
+export type AnnouncementUpsertRequest = {
+  collection_id: number;
+  title: string;
+  subtitle?: string | null;
+  background_color?: string;
+  text_color?: string;
+  is_active?: boolean;
+  shop_display_id?: string;
 };
 
 export type Attribute = {

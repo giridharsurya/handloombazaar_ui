@@ -77,6 +77,12 @@ export default function Header() {
               >
                 Featured
               </Link>
+              <Link
+                href="/collections"
+                className="px-3 py-1 rounded hover:bg-rose-500 transition-colors"
+              >
+                Collections
+              </Link>
             </div>
           </nav>
         </div>

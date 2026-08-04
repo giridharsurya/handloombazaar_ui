@@ -28,6 +28,7 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
     confirmPassword: "",
     year_established: "",
     address: "",
+    city: "",
     phone_number: "",
     website_url: "",
     youtube_url: "",
@@ -87,6 +88,10 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
       setLocalError("Address is required");
       return;
     }
+    if (!formData.city.trim()) {
+      setLocalError("City is required");
+      return;
+    }
     if (!formData.phone_number.trim()) {
       setLocalError("Phone number is required");
       return;
@@ -105,6 +110,7 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
         password: formData.password,
         year_established: parsedYear,
         address: formData.address.trim(),
+        city: formData.city.trim(),
         phone_number: formData.phone_number.trim(),
         website_url: formData.website_url.trim() || undefined,
         youtube_url: formData.youtube_url.trim() || undefined,
@@ -119,7 +125,7 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
       } else {
         router.push("/vendor/dashboard");
       }
-    } catch (err) {
+    } catch {
       // Error is set in auth context
     } finally {
       setIsLoading(false);

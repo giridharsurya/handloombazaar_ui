@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 // mock data removed; products fetched via API and used as source of truth
 import { useApi } from "@/lib/ApiProvider";
 import { ProductFilterAttribute, ProductListItem } from "@/types/apiTypes";
@@ -8,8 +9,13 @@ import ProductGrid from "@/components/Product/ProductGrid";
 import SelectionToolbar from "@/components/Product/SelectionToolbar";
 import SareesFilter, { FilterState } from "@/components/Filters/SareesFilter";
 import FilterHeader from "@/components/FilterHeader/FilterHeader";
+import Pagination from "@/components/Product/Pagination";
 
 export default function SareesPage() {
+  const searchParams = useSearchParams();
+  const collectionIdParam = searchParams.get("collection_id");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 25000],
     selectedAttributeOptionIds: {},
@@ -21,6 +27,8 @@ export default function SareesPage() {
 
   const [apiProducts, setApiProducts] = useState<ProductListItem[] | null>(null);
   const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>([]);
+  const [collectionFilterIds, setCollectionFilterIds] = useState<Set<string> | null>(null);
+  const [collectionFilterName, setCollectionFilterName] = useState<string | null>(null);
 
   const api = useApi();
   const DEBUG_FILTERS = true;
@@ -131,6 +139,56 @@ export default function SareesPage() {
     };
   }, [api]);
 
+  useEffect(() => {
+    let mounted = true;
+
+    const hydrateCollectionFilter = async () => {
+      if (!collectionIdParam) {
+        if (mounted) {
+          setCollectionFilterIds(null);
+          setCollectionFilterName(null);
+        }
+        return;
+      }
+
+      const numericId = Number(collectionIdParam);
+      if (!Number.isFinite(numericId)) {
+        if (mounted) {
+          setCollectionFilterIds(null);
+          setCollectionFilterName(null);
+        }
+        return;
+      }
+
+      try {
+        const [membersResponse, allCollections] = await Promise.all([
+          api.collections.getProducts(numericId, { authenticated: false }),
+          api.collections.list({ authenticated: false }),
+        ]);
+
+        const memberRows = (membersResponse?.items || membersResponse || []) as Array<{ display_id: string }>;
+        const ids = new Set(memberRows.map((item) => String(item.display_id)));
+        const collectionName = (allCollections || []).find((c: any) => Number(c.id) === numericId)?.name || null;
+
+        if (mounted) {
+          setCollectionFilterIds(ids);
+          setCollectionFilterName(collectionName);
+        }
+      } catch {
+        if (mounted) {
+          setCollectionFilterIds(null);
+          setCollectionFilterName(null);
+        }
+      }
+    };
+
+    hydrateCollectionFilter();
+
+    return () => {
+      mounted = false;
+    };
+  }, [api, collectionIdParam]);
+
   // Filter sarees based on selected filters
   const displayProducts = apiProducts ?? [];
 
@@ -173,8 +231,18 @@ export default function SareesPage() {
       return Array.from(selectedOptionValues).some((value) => productOptionValuesForAttr.has(value));
     });
 
-    return priceMatch && attributeMatch;
+    const collectionMatch = collectionFilterIds ? collectionFilterIds.has(String(saree.display_id)) : true;
+
+    return priceMatch && attributeMatch && collectionMatch;
   });
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, collectionFilterIds]);
+
+  const paginationOffset = (currentPage - 1) * itemsPerPage;
+  const paginatedSarees = filteredSarees.slice(paginationOffset, paginationOffset + itemsPerPage);
 
   useEffect(() => {
     if (!DEBUG_FILTERS || !apiProducts) return;
@@ -269,7 +337,7 @@ export default function SareesPage() {
       {/* Products section: sticky header and filters release at section end */}
       <section>
         <FilterHeader
-          pageTitle="Sarees"
+          pageTitle={collectionFilterName ? `Sarees - ${collectionFilterName}` : "Sarees"}
           productCount={filteredSarees.length}
           showFiltersToggle={true}
           onToggleFilters={() => setShowFilters(!showFilters)}
@@ -297,8 +365,9 @@ export default function SareesPage() {
 
             {/* Right Column - Product grid */}
             <section className="flex-1 min-w-0">
-              <SelectionToolbar visibleIds={filteredSarees.map((p) => p.display_id)} scope="public" />
-              <ProductGrid products={filteredSarees} showCheckboxes={true} scope="public" />
+              <SelectionToolbar visibleIds={paginatedSarees.map((p) => p.display_id)} scope="public" />
+              <ProductGrid products={paginatedSarees} showCheckboxes={true} scope="public" />
+              <Pagination currentPage={currentPage} totalItems={filteredSarees.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
             </section>
           </div>
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useApi } from "@/lib/ApiProvider";
 import { useAuth } from "@/lib/AuthContext";
@@ -12,6 +12,7 @@ type Shop = {
   name: string;
   display_id: string;
   email?: string;
+  city?: string | null;
   year_established?: number;
   address?: string;
   phone_number?: string;
@@ -52,7 +53,7 @@ export default function AdminShopsPage() {
     }
   }, [auth, isLoading, router]);
 
-  const loadShopsData = async () => {
+  const loadShopsData = useCallback(async () => {
     setIsLoadingShops(true);
     setShopsFeedback("");
 
@@ -66,12 +67,18 @@ export default function AdminShopsPage() {
     } finally {
       setIsLoadingShops(false);
     }
-  };
+  }, [api.admin]);
 
   useEffect(() => {
     if (isLoading || !auth || auth.role !== "admin") return;
-    loadShopsData();
-  }, [isLoading, auth]);
+    const timerId = window.setTimeout(() => {
+      void loadShopsData();
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timerId);
+    };
+  }, [isLoading, auth, loadShopsData]);
 
   useEffect(() => {
     const loadSelectedShop = async () => {
@@ -92,6 +99,7 @@ export default function AdminShopsPage() {
           email: detail.email || "",
           year_established: String(detail.year_established || ""),
           address: detail.address || "",
+          city: detail.city || "",
           phone_number: detail.phone_number || "",
           website_url: detail.website_url || "",
           youtube_url: detail.youtube_url || "",
@@ -151,6 +159,10 @@ export default function AdminShopsPage() {
       setShopFormFeedback("Address is required.");
       return;
     }
+    if (!shopForm.city.trim()) {
+      setShopFormFeedback("City is required.");
+      return;
+    }
     if (!shopForm.phone_number.trim()) {
       setShopFormFeedback("Phone number is required.");
       return;
@@ -165,6 +177,7 @@ export default function AdminShopsPage() {
         email: shopForm.email.trim(),
         year_established: parsedYear,
         address: shopForm.address.trim(),
+        city: shopForm.city.trim(),
         phone_number: shopForm.phone_number.trim(),
         website_url: shopForm.website_url.trim() || null,
         youtube_url: shopForm.youtube_url.trim() || null,
@@ -183,6 +196,7 @@ export default function AdminShopsPage() {
         email: updated.email || "",
         year_established: String(updated.year_established || ""),
         address: updated.address || "",
+        city: updated.city || "",
         phone_number: updated.phone_number || "",
         website_url: updated.website_url || "",
         youtube_url: updated.youtube_url || "",
