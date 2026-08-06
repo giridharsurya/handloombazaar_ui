@@ -98,7 +98,12 @@ export default function AdminShopProductsPage() {
       setError("");
       try {
         const [productsData, shopDetail] = await Promise.all([
-          api.products.getProducts({ shop_display_id: selectedShopDisplayId, authenticated: true }),
+          api.products.getProducts({
+            shop_display_id: selectedShopDisplayId,
+            page: 1,
+            page_size: 5,
+            authenticated: true,
+          }),
           api.shops.getDetail({ display_id: selectedShopDisplayId }),
         ]);
 

@@ -25,11 +25,7 @@ type ShopCollectionItem = {
   is_active?: boolean;
 };
 
-type CollectionMemberItem = {
-  display_id: string;
-  name: string;
-  shop_display_id?: string;
-};
+type CollectionMemberItem = ProductListItem & { id: string };
 
 type ShopDetailsPageProps = {
   shop: ShopDetail;
@@ -41,7 +37,7 @@ type ShopDetailsPageProps = {
 export default function ShopDetailsPage({ shop, products, scope, actionsSidebar }: ShopDetailsPageProps) {
   const [displayProducts, setDisplayProducts] = useState<ProductListItem[]>(products);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const itemsPerPage = 5;
   const [activeTab, setActiveTab] = useState<"overview" | "products" | "collections" | "about">("overview");
   const [selectedCollectionKey, setSelectedCollectionKey] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({
@@ -57,6 +53,10 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
   const [loadingCollections, setLoadingCollections] = useState(false);
   const [collectionMembers, setCollectionMembers] = useState<Record<string, CollectionMemberItem[]>>({});
   const [shopAnnouncements, setShopAnnouncements] = useState<AnnouncementBanner[]>([]);
+  const [serverProducts, setServerProducts] = useState<ProductListItem[]>([]);
+  const [serverTotalProducts, setServerTotalProducts] = useState(0);
+  const [serverLoadingProducts, setServerLoadingProducts] = useState(false);
+  const [serverProductsError, setServerProductsError] = useState("");
 
   const { isVariantMode, mainProductId, variantProductIds } = useVariantSelection();
   const api = useApi();
@@ -118,23 +118,116 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     return filteredProducts.filter((p) => selectedCollectionMemberIds.has(String(p.display_id)));
   }, [filteredProducts, selectedCollectionMemberIds]);
 
-  const { actionViewIds, setAllProducts } = useProductActions();
-  const visibleProducts = actionViewIds
-    ? collectionScopedProducts.filter((p) => actionViewIds.includes(String(p.display_id)))
-    : collectionScopedProducts;
+  const { actionViewIds, actionCollectionQuery, setAllProducts } = useProductActions();
+  const selectedAttributeOptionIds = useMemo(
+    () =>
+      Object.values(filters.selectedAttributeOptionIds)
+        .flat()
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id)),
+    [filters]
+  );
+
+  const shouldUseServerProducts = isManagedScope && activeTab === "products";
+
+  useEffect(() => {
+    if (!shouldUseServerProducts) return;
+
+    let cancelled = false;
+
+    const loadServerProducts = async () => {
+      setServerLoadingProducts(true);
+      setServerProductsError("");
+
+      try {
+        const baseParams = {
+          authenticated: true,
+          page: currentPage,
+          page_size: itemsPerPage,
+          min_price: filters.priceRange[0],
+          max_price: filters.priceRange[1],
+          attribute_option_ids: selectedAttributeOptionIds,
+        } as const;
+
+        let pageData;
+        if (actionCollectionQuery) {
+          pageData = await api.collections.getProductsPage(actionCollectionQuery.collectionId, {
+            ...baseParams,
+            mode: actionCollectionQuery.mode,
+            source_shop_display_id: actionCollectionQuery.mode !== "view" ? shop.display_id : undefined,
+          });
+        } else if (selectedCollectionKey) {
+          const [, collectionIdValue] = selectedCollectionKey.split(":");
+          const selectedCollectionId = Number(collectionIdValue);
+          pageData = await api.collections.getProductsPage(selectedCollectionId, {
+            ...baseParams,
+            mode: "view",
+          });
+        } else {
+          pageData = await api.products.getProductsPage({
+            ...baseParams,
+            shop_display_id: shop.display_id,
+          });
+        }
+
+        if (cancelled) return;
+        let items = pageData.items || [];
+        if (scope?.startsWith("vendor:") && selectedCollectionKey && !actionCollectionQuery) {
+          items = items.filter((item) => String(item.shop_display_id) === String(shop.display_id));
+        }
+        setServerProducts(items);
+        setServerTotalProducts(pageData.total_count || 0);
+      } catch (err) {
+        if (cancelled) return;
+        const msg = err instanceof Error ? err.message : "Failed to load products";
+        setServerProductsError(msg);
+        setServerProducts([]);
+        setServerTotalProducts(0);
+      } finally {
+        if (!cancelled) setServerLoadingProducts(false);
+      }
+    };
+
+    loadServerProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    shouldUseServerProducts,
+    api,
+    currentPage,
+    itemsPerPage,
+    filters,
+    selectedAttributeOptionIds,
+    actionCollectionQuery,
+    selectedCollectionKey,
+    scope,
+    shop.display_id,
+  ]);
+
+  const visibleProducts = useMemo(() => {
+    if (shouldUseServerProducts) return serverProducts;
+    if (actionViewIds) {
+      return collectionScopedProducts.filter((p) => actionViewIds.includes(String(p.display_id)));
+    }
+    return collectionScopedProducts;
+  }, [shouldUseServerProducts, serverProducts, actionViewIds, collectionScopedProducts]);
 
   // keep provider aware of current products
   useEffect(() => {
-    setAllProducts(filteredProducts);
-  }, [filteredProducts, setAllProducts]);
+    setAllProducts(shouldUseServerProducts ? visibleProducts : filteredProducts);
+  }, [filteredProducts, shouldUseServerProducts, visibleProducts, setAllProducts]);
 
   // Reset to page 1 when filters or collection changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters, selectedCollectionKey]);
+  }, [filters, selectedCollectionKey, actionCollectionQuery]);
 
   const paginationOffset = (currentPage - 1) * itemsPerPage;
-  const paginatedProducts = visibleProducts.slice(paginationOffset, paginationOffset + itemsPerPage);
+  const paginatedProducts = shouldUseServerProducts
+    ? visibleProducts
+    : visibleProducts.slice(paginationOffset, paginationOffset + itemsPerPage);
 
 
   useEffect(() => {
@@ -211,27 +304,26 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
         const normalizedSystemCollections: ShopCollectionItem[] = ((systemCollectionRows || []) as Array<Omit<ShopCollectionItem, "source">>)
           .map((item) => ({ ...item, source: "system" as const }));
 
-        const shopProductIds = new Set(products.map((p) => String(p.display_id)));
-
         const memberEntries = await Promise.all(
           [...normalizedShopCollections, ...normalizedSystemCollections].map(async (collectionItem) => {
             const collectionKey = `${collectionItem.source}:${collectionItem.id}`;
             try {
-              const response = await api.collections.getProducts(collectionItem.id, { authenticated: isManagedScope });
-              const items = (response?.items || response || []) as CollectionMemberItem[];
+              // Use getProductsPage with a larger page_size to ensure we get all products for ribbon display
+              const pageData = await api.collections.getProductsPage(collectionItem.id, {
+                authenticated: isManagedScope,
+                page: 1,
+                page_size: 100,
+                shop_display_id: collectionItem.source === "system" ? shop.display_id : undefined,
+              });
+              const items = (pageData?.items || []) as ProductListItem[];
               const normalizedItems = items.map((it) => ({
-                display_id: String(it.display_id),
-                name: it.name,
-                shop_display_id: it.shop_display_id,
-              }));
+                ...it,
+                id: `${collectionItem.source}-${collectionItem.id}-${it.display_id}`,
+              } as CollectionMemberItem));
 
-              const filteredItems =
-                collectionItem.source === "system"
-                  ? normalizedItems.filter((it) => shopProductIds.has(String(it.display_id)))
-                  : normalizedItems;
-
-              return [collectionItem, collectionKey, filteredItems] as const;
-            } catch {
+              return [collectionItem, collectionKey, normalizedItems] as const;
+            } catch (err) {
+              console.warn(`[ShopDetailsPage] Failed to load collection ${collectionItem.id} products:`, err);
               return [collectionItem, collectionKey, [] as CollectionMemberItem[]] as const;
             }
           })
@@ -344,23 +436,17 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
   const homeBannerItems = useMemo(() => shopAnnouncements, [shopAnnouncements]);
 
   const collectionRibbonRows = useMemo(() => {
-    const productByDisplayId = new Map(displayProducts.map((p) => [String(p.display_id), p]));
-
     return collections.map((collectionItem) => {
       const collectionKey = `${collectionItem.source}:${collectionItem.id}`;
       const members = collectionMembers[collectionKey] || [];
-      const collectionProducts = members
-        .map((member) => productByDisplayId.get(String(member.display_id)))
-        .filter((item): item is ProductListItem => !!item)
-        .map((item) => ({ ...item, id: `${collectionItem.source}-${collectionItem.id}-${item.display_id}` }));
 
       return {
         collection: collectionItem,
         key: collectionKey,
-        items: collectionProducts,
+        items: members,
       };
     });
-  }, [collections, collectionMembers, displayProducts]);
+  }, [collections, collectionMembers]);
 
   const topCollectionRibbonRows = useMemo(() => {
     const systemRows = collectionRibbonRows.filter((row) => row.collection.source === "system");
@@ -383,14 +469,19 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
 
   const latestTwentyProducts = useMemo(() => {
     return displayProducts
-      .filter((product) => product.is_active && product.stock_quantity > 0)
+      .filter((product) => {
+        if (scope === "public") {
+          return product.is_active && product.stock_quantity > 0;
+        }
+        return true;
+      })
       .sort((a, b) => {
         const aTime = new Date(a.updated_at || a.created_at || 0).getTime();
         const bTime = new Date(b.updated_at || b.created_at || 0).getTime();
         return bTime - aTime;
       })
       .slice(0, 20);
-  }, [displayProducts]);
+  }, [displayProducts, scope]);
 
   const aboutRows = [
     { label: "Established", value: String(shop.year_established || "-") },
@@ -661,7 +752,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
           <section ref={productsSectionRef}>
             <FilterHeader
               pageTitle={selectedCollectionName ? `${shop.name} - ${selectedCollectionName}` : shop.name}
-              productCount={visibleProducts.length}
+              productCount={shouldUseServerProducts ? serverTotalProducts : visibleProducts.length}
               showFiltersToggle={true}
               onToggleFilters={() => setShowFilters(!showFilters)}
               filtersOpen={showFilters}
@@ -680,6 +771,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
                   >
                     <SareesFilter
                       attributes={filterAttributes}
+                      value={filters}
                       onFilterChange={setFilters}
                     />
                   </aside>
@@ -698,7 +790,18 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
                     mainProductId={mainProductId ?? undefined}
                     variantProductIds={variantProductIds}
                   />
-                  <Pagination currentPage={currentPage} totalItems={visibleProducts.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
+                  <Pagination
+                    currentPage={currentPage}
+                    totalItems={shouldUseServerProducts ? serverTotalProducts : visibleProducts.length}
+                    itemsPerPage={itemsPerPage}
+                    onPageChange={setCurrentPage}
+                  />
+                  {shouldUseServerProducts && serverLoadingProducts ? (
+                    <p className="mt-3 text-sm text-slate-600">Loading products...</p>
+                  ) : null}
+                  {shouldUseServerProducts && serverProductsError ? (
+                    <p className="mt-3 text-sm text-rose-600">{serverProductsError}</p>
+                  ) : null}
                 </section>
 
                 {showSelectionTools ? resolvedActionsSidebar : null}

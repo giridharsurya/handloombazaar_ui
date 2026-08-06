@@ -5,6 +5,7 @@ import { ProductFilterAttribute } from "@/types/apiTypes";
 
 type SareesFilterProps = {
   attributes: ProductFilterAttribute[];
+  value?: FilterState;
   onFilterChange?: (filters: FilterState) => void;
 };
 
@@ -13,32 +14,42 @@ export type FilterState = {
   selectedAttributeOptionIds: Record<number, number[]>;
 };
 
-export default function SareesFilter({ attributes, onFilterChange }: SareesFilterProps) {
+const DEFAULT_FILTERS: FilterState = {
+  priceRange: [0, 25000],
+  selectedAttributeOptionIds: {},
+};
+
+export default function SareesFilter({ attributes, value, onFilterChange }: SareesFilterProps) {
   const DEBUG_FILTERS = true;
-  const [filters, setFilters] = useState<FilterState>({
-    priceRange: [0, 25000],
-    selectedAttributeOptionIds: {},
-  });
+  const [draftFilters, setDraftFilters] = useState<FilterState>(value ?? DEFAULT_FILTERS);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     price: true,
   });
 
+  const externalFilters = value ?? DEFAULT_FILTERS;
+  const hasPendingChanges = JSON.stringify(draftFilters) !== JSON.stringify(externalFilters);
+  const hasActiveFilters = JSON.stringify(externalFilters) !== JSON.stringify(DEFAULT_FILTERS);
+  const applyButtonLabel = hasPendingChanges ? "Apply Filters" : "Filters Applied";
+  const resetButtonClassName = hasActiveFilters
+    ? "flex-1 rounded-md border border-rose-600 bg-white px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 dark:bg-gray-800 dark:text-rose-300 dark:hover:border-rose-500"
+    : "flex-1 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-rose-600 hover:text-rose-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-rose-500";
+
   const handleMinPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nextMin = Math.min(Number(e.target.value), draftFilters.priceRange[1]);
     const newFilters: FilterState = {
-      ...filters,
-      priceRange: [Number(e.target.value), filters.priceRange[1]],
+      ...draftFilters,
+      priceRange: [nextMin, draftFilters.priceRange[1]],
     };
-    setFilters(newFilters);
-    onFilterChange?.(newFilters);
+    setDraftFilters(newFilters);
   };
 
   const handleMaxPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const nextMax = Math.max(Number(e.target.value), draftFilters.priceRange[0]);
     const newFilters: FilterState = {
-      ...filters,
-      priceRange: [filters.priceRange[0], Number(e.target.value)],
+      ...draftFilters,
+      priceRange: [draftFilters.priceRange[0], nextMax],
     };
-    setFilters(newFilters);
-    onFilterChange?.(newFilters);
+    setDraftFilters(newFilters);
   };
 
   const toggleSection = (key: string) => {
@@ -46,15 +57,15 @@ export default function SareesFilter({ attributes, onFilterChange }: SareesFilte
   };
 
   const handleAttributeOptionToggle = (attributeId: number, optionId: number) => {
-    const current = filters.selectedAttributeOptionIds[attributeId] || [];
+    const current = draftFilters.selectedAttributeOptionIds[attributeId] || [];
     const updated = current.includes(optionId)
       ? current.filter((id) => id !== optionId)
       : [...current, optionId];
 
     const newFilters: FilterState = {
-      ...filters,
+      ...draftFilters,
       selectedAttributeOptionIds: {
-        ...filters.selectedAttributeOptionIds,
+        ...draftFilters.selectedAttributeOptionIds,
         [attributeId]: updated,
       },
     };
@@ -66,21 +77,32 @@ export default function SareesFilter({ attributes, onFilterChange }: SareesFilte
         nextFilters: newFilters,
       });
     }
-    setFilters(newFilters);
-    onFilterChange?.(newFilters);
+    setDraftFilters(newFilters);
+  };
+
+  const handleApply = () => {
+    if (!hasPendingChanges) {
+      return;
+    }
+    if (DEBUG_FILTERS) {
+      console.log("[SareesFilter][Apply] Applying filters", draftFilters);
+    }
+    onFilterChange?.(draftFilters);
   };
 
   const handleReset = () => {
-    const newFilters: FilterState = {
-      priceRange: [0, 25000],
-      selectedAttributeOptionIds: {},
-    };
     if (DEBUG_FILTERS) {
-      console.log("[SareesFilter][Reset] Filters reset", newFilters);
+      console.log("[SareesFilter][Reset] Filters reset", DEFAULT_FILTERS);
     }
-    setFilters(newFilters);
-    onFilterChange?.(newFilters);
+    setDraftFilters(DEFAULT_FILTERS);
+    onFilterChange?.(DEFAULT_FILTERS);
   };
+
+  React.useEffect(() => {
+    if (!value) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setDraftFilters(value);
+  }, [value]);
 
   return (
     <aside className="w-full bg-gray-50 dark:bg-gray-900 rounded-lg p-6 h-fit">
@@ -99,34 +121,55 @@ export default function SareesFilter({ attributes, onFilterChange }: SareesFilte
           </span>
         </button>
         {expandedSections.price ? (
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm text-gray-600 dark:text-gray-400">
-                Min: ₹{filters.priceRange[0].toLocaleString()}
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <label className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                <span>Min</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={draftFilters.priceRange[1]}
+                  value={draftFilters.priceRange[0]}
+                  onChange={handleMinPriceChange}
+                  className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-rose-500 focus:outline-none"
+                />
               </label>
-              <input
-                type="range"
-                min="0"
-                max="25000"
-                step="1000"
-                value={filters.priceRange[0]}
-                onChange={handleMinPriceChange}
-                className="w-full"
-              />
+              <label className="space-y-1 text-sm text-gray-600 dark:text-gray-400">
+                <span>Max</span>
+                <input
+                  type="number"
+                  min={draftFilters.priceRange[0]}
+                  max={25000}
+                  value={draftFilters.priceRange[1]}
+                  onChange={handleMaxPriceChange}
+                  className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-rose-500 focus:outline-none"
+                />
+              </label>
             </div>
             <div>
               <label className="text-sm text-gray-600 dark:text-gray-400">
-                Max: ₹{filters.priceRange[1].toLocaleString()}
+                Range: ₹{draftFilters.priceRange[0].toLocaleString()} - ₹{draftFilters.priceRange[1].toLocaleString()}
               </label>
-              <input
-                type="range"
-                min="0"
-                max="25000"
-                step="1000"
-                value={filters.priceRange[1]}
-                onChange={handleMaxPriceChange}
-                className="w-full"
-              />
+              <div className="space-y-4 mt-2">
+                <input
+                  type="range"
+                  min="0"
+                  max="25000"
+                  step="1000"
+                  value={draftFilters.priceRange[0]}
+                  onChange={handleMinPriceChange}
+                  className="w-full"
+                />
+                <input
+                  type="range"
+                  min="0"
+                  max="25000"
+                  step="1000"
+                  value={draftFilters.priceRange[1]}
+                  onChange={handleMaxPriceChange}
+                  className="w-full"
+                />
+              </div>
             </div>
           </div>
         ) : null}
@@ -135,7 +178,7 @@ export default function SareesFilter({ attributes, onFilterChange }: SareesFilte
       {attributes.map((attribute) => {
         const sectionKey = `attr-${attribute.id}`;
         const isOpen = !!expandedSections[sectionKey];
-        const selectedOptions = filters.selectedAttributeOptionIds[attribute.id] || [];
+        const selectedOptions = draftFilters.selectedAttributeOptionIds[attribute.id] || [];
 
         return (
           <div key={attribute.id} className="mb-6 border-t border-gray-200 pt-4 dark:border-gray-700">
@@ -169,13 +212,31 @@ export default function SareesFilter({ attributes, onFilterChange }: SareesFilte
         );
       })}
 
-      {/* Reset Button */}
-      <button
-        onClick={handleReset}
-        className="w-full px-4 py-2 bg-rose-600 text-white rounded-md hover:bg-rose-700 transition-colors text-sm font-medium"
-      >
-        Reset Filters
-      </button>
+      <div className="mb-3 text-sm text-gray-500 dark:text-gray-400">
+        Changes are applied only after clicking the button below.
+      </div>
+      <div className="flex gap-3">
+        <button
+          type="button"
+          onClick={handleApply}
+          disabled={!hasPendingChanges}
+          className={`flex-1 rounded-md px-4 py-2 text-sm font-medium text-white transition-colors ${hasPendingChanges ? "bg-rose-600 hover:bg-rose-700" : "bg-emerald-600 hover:bg-emerald-700"} disabled:cursor-not-allowed disabled:bg-emerald-300`}
+        >
+          {applyButtonLabel}
+        </button>
+        <button
+          type="button"
+          onClick={handleReset}
+          className={resetButtonClassName}
+        >
+          Reset Filters
+        </button>
+      </div>
+      {hasActiveFilters ? (
+        <p className="mt-2 text-sm text-emerald-700 dark:text-emerald-300">Filters are active and will persist until reset.</p>
+      ) : (
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No filters are currently active.</p>
+      )}
     </aside>
   );
 }

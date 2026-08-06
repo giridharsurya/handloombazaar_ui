@@ -40,30 +40,20 @@ export default function SystemCollectionsPage() {
         const nextCollections = (rows || []) as Collection[];
         setCollections(nextCollections);
 
-        const catalog = await api.products.getProducts({
-          page: 1,
-          page_size: 100,
-          authenticated: isAdmin,
-        });
-
-        const publicCatalog = isAdmin
-          ? (catalog || [])
-          : (catalog || []).filter((p) => p.is_active !== false && Number(p.stock_quantity ?? 0) > 0);
-        const catalogByDisplayId = new Map(publicCatalog.map((p) => [String(p.display_id), p]));
-
         const ribbonEntries = await Promise.all(
           nextCollections.map(async (collection) => {
             try {
-              const membersResponse = await api.collections.getProducts(collection.id, {
+              const pageData = await api.collections.getProductsPage(collection.id, {
                 authenticated: isAdmin,
+                page: 1,
+                page_size: 12,
               });
-              const memberRows = (membersResponse?.items || membersResponse || []) as Array<{ display_id: string }>;
-              const items = memberRows
-                .map((item) => catalogByDisplayId.get(String(item.display_id)))
-                .filter((item): item is ProductListItem => !!item)
-                .slice(0, 12)
-                .map((item) => ({ ...item, id: String(item.display_id) }));
-              return [collection.id, items] as const;
+              const items = (pageData?.items || []) as ProductListItem[];
+              const normalizedItems = items.map((item) => ({
+                ...item,
+                id: String(item.display_id),
+              }));
+              return [collection.id, normalizedItems] as const;
             } catch {
               return [collection.id, [] as RibbonProduct[]] as const;
             }
@@ -101,7 +91,7 @@ export default function SystemCollectionsPage() {
 
   return (
     <main className="min-h-screen bg-slate-50 text-slate-900">
-      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full px-4 py-8 sm:px-6 lg:px-8">
         {loading ? <p className="text-sm text-slate-600">Loading collections...</p> : null}
         {error ? <p className="text-sm text-rose-600">{error}</p> : null}
 

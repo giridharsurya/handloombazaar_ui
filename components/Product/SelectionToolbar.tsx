@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { useProductSelection, useSelectionScope } from "@/lib/productSelection";
+import { useProductSelectionWithExtend, useSelectionScope } from "@/lib/productSelection";
 import { useAuth } from "@/lib/AuthContext";
 
 type SelectionToolbarProps = {
@@ -11,7 +11,7 @@ type SelectionToolbarProps = {
 
 export default function SelectionToolbar({ visibleIds, scope }: SelectionToolbarProps) {
   const resolvedScope = useSelectionScope(scope);
-  const { selectedIds, count, clear, selectAll } = useProductSelection(resolvedScope);
+  const { selectedIds, count, clear, extendSelection } = useProductSelectionWithExtend(resolvedScope);
   const { auth } = useAuth();
 
   const scopeLabel = (() => {
@@ -33,9 +33,9 @@ export default function SelectionToolbar({ visibleIds, scope }: SelectionToolbar
         <button
           type="button"
           className="px-3 py-1 text-sm bg-gray-100 dark:bg-gray-800 rounded"
-          onClick={() => visibleIds && selectAll(visibleIds)}
+          onClick={() => visibleIds && extendSelection(visibleIds)}
         >
-          Select all
+          Select all on page
         </button>
         <button
           type="button"

@@ -20,6 +20,7 @@ type ProductSelectionContextValue = {
   toggleScope: (id: string, scope: string) => void;
   clearScope: (scope: string) => void;
   selectAllScope: (ids: string[], scope: string) => void;
+  extendSelectionScope: (ids: string[], scope: string) => void;
   isSelectedScope: (id: string, scope: string) => boolean;
   getSelectedIdsScope: (scope: string) => string[];
 };
@@ -58,6 +59,16 @@ export function ProductSelectionProvider({ children }: { children: React.ReactNo
     setScopes((prev) => ({ ...prev, [scope]: ids }));
   }, []);
 
+  const extendSelectionScope = useCallback((ids: string[], scope: string) => {
+    setScopes((prev) => {
+      const current = new Set(prev[scope] ?? []);
+      for (const id of ids) {
+        current.add(id);
+      }
+      return { ...prev, [scope]: Array.from(current) };
+    });
+  }, []);
+
   const isSelectedScope = useCallback((id: string, scope: string) => {
     const arr = scopes[scope] ?? [];
     return arr.includes(id);
@@ -68,8 +79,8 @@ export function ProductSelectionProvider({ children }: { children: React.ReactNo
   }, [scopes]);
 
   const value = useMemo(
-    () => ({ scopes, toggleScope, clearScope, selectAllScope, isSelectedScope, getSelectedIdsScope }),
-    [scopes, toggleScope, clearScope, selectAllScope, isSelectedScope, getSelectedIdsScope]
+    () => ({ scopes, toggleScope, clearScope, selectAllScope, extendSelectionScope, isSelectedScope, getSelectedIdsScope }),
+    [scopes, toggleScope, clearScope, selectAllScope, extendSelectionScope, isSelectedScope, getSelectedIdsScope]
   );
 
   // Clear sensitive scopes on logout (keep public scope)
@@ -133,6 +144,34 @@ export function useProductSelection(scope?: string): BoundSelectionApi {
   const isSelected = (id: string) => ctx.isSelectedScope(id, resolvedScope);
 
   return { selectedIds, count, toggle, clear, selectAll, isSelected };
+}
+
+export function useProductSelectionWithExtend(scope?: string): BoundSelectionApi & { extendSelection: (ids: string[]) => void } {
+  const ctx = useContext(ProductSelectionContext);
+  if (!ctx) {
+    return {
+      selectedIds: [],
+      count: 0,
+      toggle: noop,
+      clear: noop,
+      selectAll: noop,
+      extendSelection: noop,
+      isSelected: () => false,
+    };
+  }
+
+  const resolvedScope = scope ?? "public";
+
+  const selectedIds = ctx.getSelectedIdsScope(resolvedScope);
+  const count = selectedIds.length;
+
+  const toggle = (id: string) => ctx.toggleScope(id, resolvedScope);
+  const clear = () => ctx.clearScope(resolvedScope);
+  const selectAll = (ids: string[]) => ctx.selectAllScope(ids, resolvedScope);
+  const extendSelection = (ids: string[]) => ctx.extendSelectionScope(ids, resolvedScope);
+  const isSelected = (id: string) => ctx.isSelectedScope(id, resolvedScope);
+
+  return { selectedIds, count, toggle, clear, selectAll, extendSelection, isSelected };
 }
 
 export default ProductSelectionProvider;

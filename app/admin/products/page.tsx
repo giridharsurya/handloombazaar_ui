@@ -19,12 +19,13 @@ function AllProductsPageInner() {
   const router = useRouter();
   const api = useApi();
   const { auth, isLoading } = useAuth();
-  const { actionViewIds, setAllProducts } = useProductActions();
+  const { actionViewIds, actionCollectionQuery, setAllProducts } = useProductActions();
   const { isVariantMode, mainProductId, variantProductIds } = useVariantSelection();
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
-  const [allProducts, setAllProductsState] = useState<ProductListItem[]>([]);
+  const itemsPerPage = 5;
+  const [pageProducts, setPageProducts] = useState<ProductListItem[]>([]);
+  const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState<FilterState>({
@@ -48,23 +49,45 @@ function AllProductsPageInner() {
     }
   }, [auth, isLoading, router]);
 
+  const selectedAttributeOptionIds = useMemo(
+    () =>
+      Object.values(filters.selectedAttributeOptionIds)
+        .flat()
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id)),
+    [filters]
+  );
+
   useEffect(() => {
     if (isLoading || !auth || auth.role !== "admin") return;
 
     let cancelled = false;
 
     const load = async () => {
+      console.log("[AllProductsPage] load products effect", { currentPage, filters, selectedAttributeOptionIds, actionCollectionQuery });
       setLoading(true);
       setError("");
       try {
-        const products = await api.products.getProducts({
-          page: 1,
-          page_size: 100,
+        const commonFilters = {
+          page: currentPage,
+          page_size: itemsPerPage,
+          min_price: filters.priceRange[0],
+          max_price: filters.priceRange[1],
+          attribute_option_ids: selectedAttributeOptionIds,
           authenticated: true,
-        });
+        } as const;
 
+        const pageData = actionCollectionQuery
+          ? await api.collections.getProductsPage(actionCollectionQuery.collectionId, {
+              ...commonFilters,
+              mode: actionCollectionQuery.mode,
+            })
+          : await api.products.getProductsPage(commonFilters);
+
+        console.log("[AllProductsPage] products loaded", { actionCollectionQuery, pageDataCount: pageData.items?.length, totalCount: pageData.total_count });
         if (cancelled) return;
-        setAllProductsState(products || []);
+        setPageProducts(pageData.items || []);
+        setTotalProducts(pageData.total_count || 0);
       } catch (err) {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : "Failed to load products";
@@ -79,70 +102,23 @@ function AllProductsPageInner() {
     return () => {
       cancelled = true;
     };
-  }, [api, auth, isLoading]);
-
-  useEffect(() => {
-    setAllProducts(allProducts);
-  }, [allProducts, setAllProducts]);
-
-  const filteredProducts = useMemo(
-    () =>
-      allProducts.filter((product) => {
-        const priceMatch =
-          product.price >= filters.priceRange[0] &&
-          product.price <= filters.priceRange[1];
-
-        const selectedByAttribute = Object.entries(filters.selectedAttributeOptionIds).filter(([, ids]) => ids.length > 0);
-        const attributeMatch = selectedByAttribute.every(([attrId, selectedOptionIds]) => {
-          const numericAttrId = Number(attrId);
-          if (!Number.isFinite(numericAttrId)) return true;
-
-          const selectedAttribute = filterAttributes.find((attr) => Number(attr.id) === numericAttrId);
-          const selectedOptionValues = new Set(
-            (selectedAttribute?.options || [])
-              .filter((opt) => (selectedOptionIds as Array<number | string>).some((selectedId) => Number(selectedId) === Number(opt.id)))
-              .map((opt) => String(opt.value).trim().toLowerCase())
-          );
-
-          const productAttrs = product.attributes || [];
-          const scopedProductAttrs = productAttrs.filter((attr) => Number(attr.definition_id) === numericAttrId);
-          const productOptionIdsForAttr = new Set(
-            scopedProductAttrs.map((attr) => Number(attr.option_id)).filter((id) => Number.isFinite(id))
-          );
-          const productOptionValuesForAttr = new Set(
-            scopedProductAttrs
-              .map((attr) => String(attr.option_value || "").trim().toLowerCase())
-              .filter((value) => value.length > 0)
-          );
-
-          const normalizedSelectedIds = (selectedOptionIds as Array<number | string>)
-            .map((selectedId) => Number(selectedId))
-            .filter((id) => Number.isFinite(id));
-
-          const idMatched = normalizedSelectedIds.some((id) => productOptionIdsForAttr.has(id));
-          if (idMatched) return true;
-          if (selectedOptionValues.size === 0) return false;
-          return Array.from(selectedOptionValues).some((value) => productOptionValuesForAttr.has(value));
-        });
-
-        return priceMatch && attributeMatch;
-      }),
-    [allProducts, filters, filterAttributes]
-  );
+  }, [api, auth, isLoading, currentPage, filters, selectedAttributeOptionIds, itemsPerPage, actionCollectionQuery]);
 
   const visibleProducts = useMemo(() => {
-    if (!actionViewIds) return filteredProducts;
+    if (actionCollectionQuery) return pageProducts;
+    if (!actionViewIds) return pageProducts;
     const idSet = new Set(actionViewIds.map(String));
-    return filteredProducts.filter((p) => idSet.has(String(p.display_id)));
-  }, [actionViewIds, filteredProducts]);
+    return pageProducts.filter((p) => idSet.has(String(p.display_id)));
+  }, [actionViewIds, pageProducts, actionCollectionQuery]);
 
-  // Reset to page 1 when filters change
+  useEffect(() => {
+    setAllProducts(visibleProducts);
+  }, [visibleProducts, setAllProducts]);
+
+  // Reset to page 1 when filters or action collection mode changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters]);
-
-  const paginationOffset = (currentPage - 1) * itemsPerPage;
-  const paginatedProducts = visibleProducts.slice(paginationOffset, paginationOffset + itemsPerPage);
+  }, [filters, actionCollectionQuery]);
 
   useEffect(() => {
     let mounted = true;
@@ -194,6 +170,8 @@ function AllProductsPageInner() {
     };
   }, [showFilters]);
 
+  const isInitialLoading = loading && pageProducts.length === 0;
+
   if (isLoading) {
     return <div className="px-4 py-6 text-sm text-slate-600">Loading auth...</div>;
   }
@@ -202,11 +180,11 @@ function AllProductsPageInner() {
     return null;
   }
 
-  if (loading) {
+  if (isInitialLoading) {
     return <div className="px-4 py-6 text-sm text-slate-600">Loading products...</div>;
   }
 
-  if (error) {
+  if (error && pageProducts.length === 0) {
     return <div className="px-4 py-6 text-sm text-rose-600">{error}</div>;
   }
 
@@ -215,7 +193,7 @@ function AllProductsPageInner() {
       <section ref={productsSectionRef}>
         <FilterHeader
           pageTitle="All Products"
-          productCount={visibleProducts.length}
+          productCount={actionCollectionQuery ? totalProducts : (actionViewIds ? visibleProducts.length : totalProducts)}
           showFiltersToggle={true}
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
@@ -232,14 +210,14 @@ function AllProductsPageInner() {
                   top: "calc(var(--app-header-height, 120px) + var(--filter-header-height, 72px))",
                 }}
               >
-                <SareesFilter attributes={filterAttributes} onFilterChange={setFilters} />
+                <SareesFilter attributes={filterAttributes} value={filters} onFilterChange={setFilters} />
               </aside>
             )}
 
             <section className="flex-1 min-w-0">
-              <SelectionToolbar scope="admin" visibleIds={paginatedProducts.map((p) => p.display_id)} />
+              <SelectionToolbar scope="admin" visibleIds={visibleProducts.map((p) => p.display_id)} />
               <ProductGrid
-                products={paginatedProducts}
+                products={visibleProducts}
                 hideShop={false}
                 showCheckboxes={true}
                 scope="admin"
@@ -247,7 +225,18 @@ function AllProductsPageInner() {
                 mainProductId={mainProductId ?? undefined}
                 variantProductIds={variantProductIds}
               />
-              <Pagination currentPage={currentPage} totalItems={visibleProducts.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
+              {loading ? (
+                <p className="mt-3 text-sm text-slate-600">Updating products...</p>
+              ) : null}
+              {error ? (
+                <p className="mt-3 text-sm text-rose-600">{error}</p>
+              ) : null}
+              <Pagination
+                currentPage={currentPage}
+                totalItems={actionCollectionQuery ? totalProducts : (actionViewIds ? visibleProducts.length : totalProducts)}
+                itemsPerPage={itemsPerPage}
+                onPageChange={setCurrentPage}
+              />
             </section>
 
             <div className="w-80 shrink-0">

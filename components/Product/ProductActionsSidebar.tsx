@@ -13,22 +13,66 @@ type ActionMode = "view" | "add" | "delete";
 export default function ProductActionsSidebar({ scope }: { scope?: string }) {
   const { auth } = useAuth();
   const resolvedScope = useSelectionScope(scope);
-  const { allProducts, setAllProducts, applyViewForVendorCollection, applyViewForSystemCollection, confirmAction, setActionViewIds } = useProductActions();
+  const {
+    allProducts,
+    setAllProducts,
+    applyViewForVendorCollection,
+    applyViewForSystemCollection,
+    confirmAction,
+    setActionViewIds,
+    clearActionCollection,
+    sidebarActionState,
+    setSidebarActionState,
+    clearSidebarActionState,
+  } = useProductActions();
   const selection = useProductSelection(resolvedScope);
   const { setVariantMode, clearVariantMode } = useVariantSelection();
-  const [action, setAction] = useState<string>("");
-  const [subtype, setSubtype] = useState<"system" | "vendor">("vendor");
+  const instanceId = React.useRef<string>(Math.random().toString(36).slice(2));
+  const { action, subtype, selectedCollectionId, mode } = sidebarActionState;
   const [collections, setCollections] = useState<any[]>([]);
   const [vendorCollections, setVendorCollections] = useState<any[]>([]);
-  const [selectedCollectionId, setSelectedCollectionId] = useState<number | null>(null);
-  const [mode, setMode] = useState<ActionMode>("view");
   const [message, setMessage] = useState<{ type: "success" | "error" | "info"; text: string } | null>(null);
+  const previousActionRef = React.useRef<string>(sidebarActionState.action);
+  const previousCollectionRef = React.useRef<number | null>(sidebarActionState.selectedCollectionId);
+  const isAdminUser = auth?.role === "admin";
+
+  useEffect(() => {
+    console.log("[ProductActionsSidebar] mount");
+    return () => {
+      console.log("[ProductActionsSidebar] unmount");
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log("[ProductActionsSidebar] auth/resolvedScope", { scope, resolvedScope, authRole: auth?.role, isAdminUser });
+  }, [scope, resolvedScope, auth?.role, isAdminUser]);
+
+  const updateAction = (value: string) => {
+    console.log("[ProductActionsSidebar] updateAction", { instanceId: instanceId.current, from: action, to: value });
+    setSidebarActionState((previous) => ({ ...previous, action: value }));
+  };
+
+  useEffect(() => {
+    if (previousActionRef.current !== action) {
+      console.log("[ProductActionsSidebar] action changed", { instanceId: instanceId.current, from: previousActionRef.current, to: action, subtype, selectedCollectionId, mode });
+      previousActionRef.current = action;
+    }
+    if (previousCollectionRef.current !== selectedCollectionId) {
+      console.log("[ProductActionsSidebar] selectedCollectionId changed", { instanceId: instanceId.current, from: previousCollectionRef.current, to: selectedCollectionId, action, subtype, mode });
+      previousCollectionRef.current = selectedCollectionId;
+    }
+  }, [action, selectedCollectionId, subtype, mode]);
+
+  useEffect(() => {
+    console.log("[ProductActionsSidebar] render state", { scope, resolvedScope, authRole: auth?.role, isAdminUser, action, subtype, selectedCollectionId, mode, selectionCount: selection.count, selectedIds: selection.selectedIds });
+  }, [scope, resolvedScope, auth?.role, isAdminUser, action, subtype, selectedCollectionId, mode, selection.count, JSON.stringify(selection.selectedIds)]);
 
   // Variants state
   const [currentVariants, setCurrentVariants] = useState<ProductListItem[]>([]);
   const [variantCount, setVariantCount] = useState(0);
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [variantMainProductId, setVariantMainProductId] = useState<string | null>(null);
+  const [variantMainProduct, setVariantMainProduct] = useState<ProductListItem | null>(null);
 
   // Attributes bulk update state
   const [editableAttributes, setEditableAttributes] = useState<ProductFilterAttribute[]>([]);
@@ -58,78 +102,107 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
   ]);
 
   const shopId = resolvedScope && resolvedScope.startsWith("vendor:") ? resolvedScope.split(":")[1] : undefined;
-  const isAdminUser = auth?.role === "admin";
+
+  useEffect(() => {
+    console.log("[ProductActionsSidebar] mount", { instanceId: instanceId.current });
+    return () => {
+      console.log("[ProductActionsSidebar] unmount", { instanceId: instanceId.current });
+    };
+  }, []);
+
+  useEffect(() => {
+    console.log("[ProductActionsSidebar] resolvedScope/auth changed", { instanceId: instanceId.current, scope, resolvedScope, authRole: auth?.role, isAdminUser });
+    if (scope === "admin" || resolvedScope === "admin" || auth?.role === "admin") {
+      setSidebarActionState((previous) => ({ ...previous, subtype: "system" }));
+      return;
+    }
+
+    if (auth !== undefined) {
+      setSidebarActionState((previous) => ({ ...previous, subtype: "vendor" }));
+    }
+  }, [scope, resolvedScope, auth?.role, isAdminUser]);
 
   // Keep the main product fixed while in variants mode.
   const mainProduct = useMemo(() => {
-    if (action === "variants" && variantMainProductId) {
-      return allProducts?.find((p) => p.display_id === variantMainProductId) || null;
-    }
-    return null;
-  }, [action, variantMainProductId, allProducts]);
+    if (action !== "variants" || !variantMainProductId) return null;
+    return allProducts?.find((p) => p.display_id === variantMainProductId) || variantMainProduct;
+  }, [action, variantMainProductId, allProducts, variantMainProduct]);
 
   const selectedProducts = useMemo(() => {
     const selectedSet = new Set(selection.selectedIds);
     return (allProducts || []).filter((p) => selectedSet.has(p.display_id));
-  }, [allProducts, JSON.stringify(selection.selectedIds)]);
+  }, [allProducts, selection.selectedIds]);
 
   const hasMixedShopSelection = useMemo(() => {
+    if (isAdminUser) return false;
     const shopSet = new Set(selectedProducts.map((p) => p.shop_display_id));
     return shopSet.size > 1;
-  }, [selectedProducts]);
+  }, [selectedProducts, isAdminUser]);
 
   useEffect(() => {
     // Entering variants mode should preserve selection and lock the current product as main.
     if (action === "variants") {
-      setSelectedCollectionId(null);
-      setActionViewIds(null);
+      console.log("[ProductActionsSidebar] effect action=variants -> clearActionCollection", { action, subtype, selectedCollectionId, mode });
+      setSidebarActionState((previous) => ({ ...previous, selectedCollectionId: null, mode: "view" }));
+      clearActionCollection();
 
       if (selection.selectedIds.length === 0) {
         setVariantMainProductId(null);
+        setVariantMainProduct(null);
         setCurrentVariants([]);
         setVariantCount(0);
         return;
       }
 
-      if (!variantMainProductId || !selection.selectedIds.includes(variantMainProductId)) {
-        setVariantMainProductId(selection.selectedIds[selection.selectedIds.length - 1]);
+      const nextMainProductId = variantMainProductId ?? selection.selectedIds[0];
+      setVariantMainProductId(nextMainProductId);
+      const productFromPage = allProducts?.find((p) => p.display_id === nextMainProductId);
+      if (productFromPage) {
+        setVariantMainProduct(productFromPage);
       }
+
+      const variantIds = new Set(selection.selectedIds.filter((id) => id !== nextMainProductId));
+      setVariantMode(true, nextMainProductId, variantIds);
       return;
     }
 
     if (action === "attributes") {
-      setSelectedCollectionId(null);
-      setActionViewIds(null);
+      console.log("[ProductActionsSidebar] effect action=attributes -> clearActionCollection", { action, subtype, selectedCollectionId, mode });
+      setSidebarActionState((previous) => ({ ...previous, selectedCollectionId: null, mode: "view" }));
+      clearActionCollection();
       return;
     }
 
     if (action === "banners") {
-      setSelectedCollectionId(null);
-      setActionViewIds(null);
+      console.log("[ProductActionsSidebar] effect action=banners -> clearActionCollection", { action, subtype, selectedCollectionId, mode });
+      setSidebarActionState((previous) => ({ ...previous, selectedCollectionId: null, mode: "view" }));
+      clearActionCollection();
       selection.clear();
       return;
     }
 
     if (bulkActionModes.has(action)) {
-      setSelectedCollectionId(null);
-      setActionViewIds(null);
+      console.log("[ProductActionsSidebar] effect action=bulk -> clearActionCollection", { action, subtype, selectedCollectionId, mode });
+      setSidebarActionState((previous) => ({ ...previous, selectedCollectionId: null, mode: "view" }));
+      clearActionCollection();
       return;
     }
 
     // Leaving variants mode: clear pinned main and variant preview state.
     if (variantMainProductId) {
       setVariantMainProductId(null);
+      setVariantMainProduct(null);
       setCurrentVariants([]);
       setVariantCount(0);
     }
 
     // Non-collection modes should clear collection view/selection state.
     if (action !== "collections") {
-      setSelectedCollectionId(null);
-      setActionViewIds(null);
-      selection.clear();
+      console.log("[ProductActionsSidebar] effect action != collections -> clearActionCollection", { action, subtype, selectedCollectionId, mode });
+      setSidebarActionState((previous) => ({ ...previous, selectedCollectionId: null, mode: "view" }));
+      clearActionCollection();
     }
-  }, [action, setActionViewIds]);
+  }, [action, JSON.stringify(selection.selectedIds), variantMainProductId, allProducts, setVariantMode]);
 
   useEffect(() => {
     if (action !== "attributes") return;
@@ -158,27 +231,35 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
 
   // Update variant selection context
   useEffect(() => {
-    if (action === "variants" && mainProduct) {
+    if (action === "variants" && variantMainProductId) {
       const variantIds = new Set(
-        selection.selectedIds.filter((id) => id !== mainProduct.display_id)
+        selection.selectedIds.filter((id) => id !== variantMainProductId)
       );
-      setVariantMode(true, mainProduct.display_id, variantIds);
+      setVariantMode(true, variantMainProductId, variantIds);
     } else {
       clearVariantMode();
     }
-  }, [action, mainProduct, JSON.stringify(selection.selectedIds), setVariantMode, clearVariantMode]);
+  }, [action, variantMainProductId, JSON.stringify(selection.selectedIds), setVariantMode, clearVariantMode]);
 
   useEffect(() => {
     if (!isAdminUser) {
-      setSubtype("vendor");
+      setSidebarActionState((previous) => ({ ...previous, subtype: "vendor" }));
       return;
     }
 
     // In admin-wide contexts without a concrete vendor scope, default to system actions.
     if (resolvedScope === "admin") {
-      setSubtype("system");
+      setSidebarActionState((previous) => ({ ...previous, subtype: "system" }));
     }
   }, [isAdminUser, resolvedScope]);
+
+  const switchCollectionSubtype = (newSubtype: "vendor" | "system") => {
+    console.log("[ProductActionsSidebar] switchCollectionSubtype", { subtype, newSubtype, selectedCollectionId, mode, action });
+    if (newSubtype === subtype) return;
+    setSidebarActionState((previous) => ({ ...previous, subtype: newSubtype, selectedCollectionId: null, mode: "view" }));
+    selection.clear();
+    clearActionCollection();
+  };
 
   useEffect(() => {
     const loadSystem = async () => {
@@ -246,6 +327,7 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
 
   // Fetch relevant products for the selected collection depending on mode.
   const fetchCollection = async () => {
+    console.log("[ProductActionsSidebar] fetchCollection", { selectedCollectionId, subtype, mode });
     if (!selectedCollectionId) return;
     try {
       if (subtype === "vendor") {
@@ -254,28 +336,32 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
         await applyViewForSystemCollection(selectedCollectionId, mode === "view" ? "view" : mode);
       }
     } catch (e) {
+      console.log("[ProductActionsSidebar] fetchCollection error", e);
       // ignore — provider already handles nulling view ids
     }
   };
 
   const fetchFor = async (collectionId: number | null, m: ActionMode) => {
+    console.log("[ProductActionsSidebar] fetchFor start", { collectionId, m, subtype, selectedCollectionId, mode, action });
     if (!collectionId) return;
     // mode changes should start with fresh selection state
     selection.clear();
-    setMode(m);
+    setSidebarActionState((previous) => ({ ...previous, mode: m }));
     try {
       if (subtype === "vendor") {
         await applyViewForVendorCollection(shopId, collectionId, m === "view" ? "view" : m);
       } else {
         await applyViewForSystemCollection(collectionId, m === "view" ? "view" : m);
       }
+      console.log("[ProductActionsSidebar] fetchFor complete", { collectionId, m, subtype });
     } catch (e) {
+      console.log("[ProductActionsSidebar] fetchFor error", e);
       // ignore
     }
   };
 
   const resetView = async () => {
-    setMode("view");
+    setSidebarActionState((previous) => ({ ...previous, mode: "view" }));
     // fetch collection products in view mode
     await fetchCollection();
   };
@@ -311,7 +397,7 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
     if (selectedCollectionId) {
       await fetchFor(selectedCollectionId, "view");
     } else {
-      setActionViewIds(null);
+      clearActionCollection();
     }
   };
 
@@ -327,6 +413,10 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
       // Keep main product selected and deterministically select existing variants.
       const ids = [productDisplayId, ...variantsList.map((v) => v.display_id)];
       selection.selectAll(Array.from(new Set(ids)));
+      const productFromPage = allProducts?.find((p) => p.display_id === productDisplayId);
+      if (productFromPage) {
+        setVariantMainProduct(productFromPage);
+      }
     } catch (e) {
       setMessage({ type: "error", text: "Failed to load variants" });
       setTimeout(() => setMessage(null), 4000);
@@ -545,7 +635,10 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
         
         <div className="mb-8 border-t border-gray-200 pt-4 dark:border-gray-700">
           <label className="text-sm font-semibold text-gray-900 dark:text-white mb-3 block">Action</label>
-          <select className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white dark:bg-gray-800 bg-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" value={action} onChange={(e) => setAction(e.target.value)}>
+          <select className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white dark:bg-gray-800 bg-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors" value={action} onChange={(e) => {
+            console.log("[ProductActionsSidebar] action select changed", { previousAction: action, nextAction: e.target.value });
+            updateAction(e.target.value);
+          }}>
             <option value="">Select action</option>
             <option value="collections">Collections</option>
             <option value="banners">Create Banner</option>
@@ -565,8 +658,8 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
             <div className="mb-8 border-t border-gray-200 pt-4 dark:border-gray-700">
               <label className="text-sm font-semibold text-gray-900 dark:text-white mb-3 block">Collection Type</label>
               <div className="flex gap-2">
-                <button className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${subtype === "vendor" ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"}`} onClick={() => setSubtype("vendor")}>My Collections</button>
-                <button className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${subtype === "system" ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"}`} onClick={() => setSubtype("system")}>System Collections</button>
+                <button className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${subtype === "vendor" ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"}`} onClick={() => switchCollectionSubtype("vendor")}>My Collections</button>
+                <button className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${subtype === "system" ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"}`} onClick={() => switchCollectionSubtype("system")}>System Collections</button>
               </div>
             </div>
 
@@ -577,11 +670,18 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
                 value={selectedCollectionId ?? ""}
                 onChange={(e) => {
                   const id = e.target.value ? Number(e.target.value) : null;
-                  setSelectedCollectionId(id);
+                  console.log("[ProductActionsSidebar] collection dropdown changed", {
+                    previousSelectedCollectionId: selectedCollectionId,
+                    newSelectedCollectionId: id,
+                    subtype,
+                    mode,
+                    action,
+                  });
+                  setSidebarActionState((previous) => ({ ...previous, selectedCollectionId: id, mode: "view" }));
                   selection.clear();
                   // when selecting a collection, default to view mode and fetch members
                   if (id) fetchFor(id, "view");
-                  else setActionViewIds(null);
+                  else clearActionCollection();
                 }}
               >
                 <option value="">Choose collection</option>
@@ -611,9 +711,10 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
                 <button
                   className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${mode === "view" ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"}`}
                   onClick={async () => {
-                    setMode("view");
+                    console.log("[ProductActionsSidebar] view mode clicked", { selectedCollectionId, subtype, mode, action });
+                    setSidebarActionState((previous) => ({ ...previous, mode: "view" }));
                     if (selectedCollectionId) await fetchFor(selectedCollectionId, "view");
-                    else setActionViewIds(null);
+                    else clearActionCollection();
                   }}
                 >
                   View
@@ -645,14 +746,14 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
               <div className="flex gap-2">
                 <button
                   className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${subtype === "vendor" ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"}`}
-                  onClick={() => setSubtype("vendor")}
+                  onClick={() => switchCollectionSubtype("vendor")}
                 >
                   Shop Collections
                 </button>
                 {isAdminUser ? (
                   <button
                     className={`flex-1 px-3 py-2 rounded-md text-sm font-medium transition-colors ${subtype === "system" ? "bg-rose-600 text-white hover:bg-rose-700" : "bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700"}`}
-                    onClick={() => setSubtype("system")}
+                    onClick={() => switchCollectionSubtype("system")}
                   >
                     System Collections
                   </button>
@@ -668,7 +769,7 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
               <select
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white dark:bg-gray-800 bg-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 value={selectedCollectionId ?? ""}
-                onChange={(e) => setSelectedCollectionId(e.target.value ? Number(e.target.value) : null)}
+                onChange={(e) => setSidebarActionState((previous) => ({ ...previous, selectedCollectionId: e.target.value ? Number(e.target.value) : null }))}
               >
                 <option value="">Choose collection</option>
                 {(subtype === "vendor" ? vendorCollections : collections).map((c: any) => (

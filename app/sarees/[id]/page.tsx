@@ -1,22 +1,73 @@
-import React from "react";
-import { notFound } from "next/navigation";
+"use client";
+
+import React, { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import ProductDetails from "@/components/Product/ProductDetails";
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:8000";
+import { useApi } from "@/lib/ApiProvider";
+import { useAuth } from "@/lib/AuthContext";
+import type { Product } from "@/types";
 
-type PageProps = {
-  params: Promise<{
-    id: string;
-  }>;
-};
+export default function SareeDetailsPage() {
+  const { id } = useParams() as { id?: string };
+  const api = useApi();
+  const { auth, isLoading } = useAuth();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [shop, setShop] = useState<Product["shop"] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string>("");
 
-export default async function SareeDetailsPage({ params }: PageProps) {
-  const { id } = await params;
-  // Fetch product detail from API
-  const res = await fetch(`${API_BASE_URL}/api/products/${encodeURIComponent(id)}`);
-  if (!res.ok) return notFound();
-  const json = await res.json();
-  const product = json.product;
-  // Fetch variants and similar items via products endpoints if desired (omitted for brevity)
+  useEffect(() => {
+    let cancelled = false;
 
-  return <ProductDetails product={product} shop={product.shop} variants={[]} similarFromShop={[]} similarFromOtherShops={[]} />;
+    const loadProduct = async () => {
+      if (!id) return;
+      if (isLoading) return;
+
+      setLoading(true);
+      setError("");
+
+      try {
+        const response = await api.products.getProductDetails(id, {
+          authenticated: !!auth,
+        });
+        if (cancelled) return;
+        const fetchedProduct = response.product as Product;
+        setProduct(fetchedProduct);
+        setShop(fetchedProduct.shop ?? null);
+      } catch (err: any) {
+        if (cancelled) return;
+        setError(err?.message || "Product not found");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    loadProduct();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id, auth, isLoading, api]);
+
+  if (loading) {
+    return <div className="px-4 py-8 text-sm text-slate-600">Loading product...</div>;
+  }
+
+  if (error) {
+    return <div className="px-4 py-8 text-sm text-rose-600">{error}</div>;
+  }
+
+  if (!product) {
+    return <div className="px-4 py-8 text-sm text-slate-600">Product not found.</div>;
+  }
+
+  return (
+    <ProductDetails
+      product={product}
+      shop={shop}
+      variants={[]}
+      similarFromShop={[]}
+      similarFromOtherShops={[]}
+    />
+  );
 }

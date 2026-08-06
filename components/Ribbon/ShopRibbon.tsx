@@ -1,13 +1,19 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import Ribbon from "@/components/Ribbon/Ribbon";
 import Icon from "@/components/Icon/Icon";
-import { ShopSummary } from "@/types/apiTypes";
+
+type ShopRibbonItem = {
+  display_id: string;
+  name: string;
+  shop_logo_url: string;
+};
 
 type Props = {
-  shops: ShopSummary[];
-  onShopClick?: (shop: ShopSummary) => void;
+  shops: ShopRibbonItem[];
+  onShopClick?: (shop: ShopRibbonItem) => void;
 };
 
 export default function ShopRibbon({ shops, onShopClick }: Props) {
@@ -15,9 +21,9 @@ export default function ShopRibbon({ shops, onShopClick }: Props) {
     <Ribbon
       title="Shops"
       action={
-        <a href="/shops" className="text-sm text-rose-600 hover:underline">
+        <Link href="/shops" className="text-sm text-rose-600 hover:underline">
           View shops
-        </a>
+        </Link>
       }
       items={shops}
       renderItem={(shop) => (

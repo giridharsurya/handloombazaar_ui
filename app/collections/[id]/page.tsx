@@ -21,8 +21,10 @@ function SystemCollectionProductsInner() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
   const [collection, setCollection] = useState<Collection | null>(null);
-  const [allProducts, setAllProductsState] = useState<ProductListItem[]>([]);
-  const [memberIds, setMemberIds] = useState<Set<string>>(new Set());
+  const [pageProducts, setPageProducts] = useState<ProductListItem[]>([]);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [productsError, setProductsError] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filters, setFilters] = useState<FilterState>({
@@ -33,6 +35,15 @@ function SystemCollectionProductsInner() {
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
+
+  const selectedAttributeOptionIds = useMemo(
+    () =>
+      Object.values(filters.selectedAttributeOptionIds)
+        .flat()
+        .map((id) => Number(id))
+        .filter((id) => Number.isFinite(id)),
+    [filters]
+  );
 
   useEffect(() => {
     if (!Number.isFinite(collectionId)) {
@@ -47,31 +58,20 @@ function SystemCollectionProductsInner() {
       setLoading(true);
       setError("");
       try {
-        const [allCollections, memberResponse, catalogProducts] = await Promise.all([
-          api.collections.list({ kind: "system", authenticated: false }),
-          api.collections.getProducts(collectionId, { authenticated: false }),
-          api.products.getProducts({ page: 1, page_size: 100, authenticated: false }),
-        ]);
+        const allCollections = await api.collections.list({ kind: "system", authenticated: false });
 
         if (cancelled) return;
 
         const collectionRow = ((allCollections || []) as Collection[]).find((c) => c.id === collectionId) || null;
-        const members = (memberResponse?.items || memberResponse || []) as Array<{ display_id: string }>;
 
         if (!collectionRow) {
           throw new Error("Collection not found");
         }
 
         setCollection(collectionRow);
-        setMemberIds(new Set(members.map((m) => String(m.display_id))));
-        // Filter to show only active products with stock
-        const visibleCatalog = (catalogProducts || []).filter(
-          (p) => p.is_active !== false && Number(p.stock_quantity ?? 0) > 0
-        );
-        setAllProductsState(visibleCatalog);
       } catch (err) {
         if (cancelled) return;
-        const msg = err instanceof Error ? err.message : "Failed to load collection products";
+        const msg = err instanceof Error ? err.message : "Failed to load collection";
         setError(msg);
       } finally {
         if (!cancelled) setLoading(false);
@@ -85,9 +85,46 @@ function SystemCollectionProductsInner() {
     };
   }, [api, collectionId]);
 
+  // Fetch products with server-side filtering and pagination
   useEffect(() => {
-    setAllProducts(allProducts);
-  }, [allProducts, setAllProducts]);
+    if (!Number.isFinite(collectionId)) return;
+
+    let cancelled = false;
+
+    const loadProducts = async () => {
+      setLoadingProducts(true);
+      setProductsError("");
+      try {
+        const pageData = await api.collections.getProductsPage(collectionId, {
+          authenticated: false,
+          mode: "view",
+          page: currentPage,
+          page_size: itemsPerPage,
+          min_price: filters.priceRange[0],
+          max_price: filters.priceRange[1],
+          attribute_option_ids: selectedAttributeOptionIds,
+        });
+
+        if (cancelled) return;
+        setPageProducts(pageData.items || []);
+        setTotalProducts(pageData.total_count || 0);
+      } catch (err) {
+        if (cancelled) return;
+        const msg = err instanceof Error ? err.message : "Failed to load collection products";
+        setProductsError(msg);
+        setPageProducts([]);
+        setTotalProducts(0);
+      } finally {
+        if (!cancelled) setLoadingProducts(false);
+      }
+    };
+
+    loadProducts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [api, collectionId, currentPage, itemsPerPage, filters, selectedAttributeOptionIds]);
 
   useEffect(() => {
     let mounted = true;
@@ -139,56 +176,10 @@ function SystemCollectionProductsInner() {
     };
   }, [showFilters]);
 
-  const memberProducts = useMemo(
-    () => allProducts.filter((p) => memberIds.has(String(p.display_id))),
-    [allProducts, memberIds]
-  );
-
-  const filteredProducts = useMemo(
-    () =>
-      memberProducts.filter((product) => {
-        const priceMatch = Number(product.price ?? 0) >= filters.priceRange[0] && Number(product.price ?? 0) <= filters.priceRange[1];
-
-        const selectedAttributeOptionIds = filters.selectedAttributeOptionIds || {};
-        const attributeMatch = Object.entries(selectedAttributeOptionIds).every(([attrIdStr, selectedOptionIds]) => {
-          if (!Array.isArray(selectedOptionIds) || selectedOptionIds.length === 0) return true;
-
-          const numericAttrId = Number(attrIdStr);
-          if (!Number.isFinite(numericAttrId)) return true;
-
-          const productAttrs = product.attributes || [];
-          const scopedProductAttrs = productAttrs.filter((attr) => Number(attr.definition_id) === numericAttrId);
-          const productOptionIdsForAttr = new Set(
-            scopedProductAttrs.map((attr) => Number(attr.option_id)).filter((id) => Number.isFinite(id))
-          );
-          const productOptionValuesForAttr = new Set(
-            scopedProductAttrs
-              .map((attr) => String(attr.option_value || "").trim().toLowerCase())
-              .filter((value) => value.length > 0)
-          );
-
-          const normalizedSelectedIds = (selectedOptionIds as Array<number | string>)
-            .map((selectedId) => Number(selectedId))
-            .filter((id) => Number.isFinite(id));
-
-          const idMatched = normalizedSelectedIds.some((id) => productOptionIdsForAttr.has(id));
-          if (idMatched) return true;
-          if (productOptionValuesForAttr.size === 0) return false;
-          return Array.from(productOptionValuesForAttr).some((value) => productOptionValuesForAttr.has(value));
-        });
-
-        return priceMatch && attributeMatch;
-      }),
-    [memberProducts, filters, filterAttributes]
-  );
-
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
   }, [filters]);
-
-  const paginationOffset = (currentPage - 1) * itemsPerPage;
-  const paginatedProducts = filteredProducts.slice(paginationOffset, paginationOffset + itemsPerPage);
 
   if (loading) {
     return <div className="px-4 py-6 text-sm text-slate-600">Loading collection...</div>;
@@ -207,7 +198,7 @@ function SystemCollectionProductsInner() {
       <section>
         <FilterHeader
           pageTitle={`Collections - ${collection.name}`}
-          productCount={filteredProducts.length}
+          productCount={totalProducts}
           showFiltersToggle={true}
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
@@ -225,14 +216,14 @@ function SystemCollectionProductsInner() {
                   top: "calc(var(--app-header-height, 120px) + var(--filter-header-height, 72px))",
                 }}
               >
-                <SareesFilter attributes={filterAttributes} onFilterChange={setFilters} />
+                <SareesFilter attributes={filterAttributes} value={filters} onFilterChange={setFilters} />
               </aside>
             )}
 
             {/* Right Column - Product grid */}
             <section className="flex-1 min-w-0">
               <ProductGrid
-                products={paginatedProducts}
+                products={pageProducts}
                 hideShop={false}
                 showCheckboxes={false}
                 scope="public"
@@ -240,7 +231,9 @@ function SystemCollectionProductsInner() {
                 mainProductId={mainProductId ?? undefined}
                 variantProductIds={variantProductIds}
               />
-              <Pagination currentPage={currentPage} totalItems={filteredProducts.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
+              <Pagination currentPage={currentPage} totalItems={totalProducts} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
+              {loadingProducts ? <p className="mt-3 text-sm text-slate-600">Loading products...</p> : null}
+              {productsError ? <p className="mt-3 text-sm text-rose-600">{productsError}</p> : null}
             </section>
           </div>
         </div>

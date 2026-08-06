@@ -10,6 +10,9 @@ import {
   Collection,
   Attribute,
   ProductsResponse,
+  ProductsResponseData,
+  ProductListQueryParams,
+  CollectionProductsQueryParams,
   ProductDetailResponse,
   ProductVariantsResponse,
   ProductListItem,
@@ -114,17 +117,8 @@ export const api = {
       return res.json();
     },
 
-    async getProducts(params: {
-      page?: number;
-      page_size?: number;
-      search?: string;
-      shop_display_id?: string;
-      min_price?: number;
-      max_price?: number;
-      attribute_filters?: string[];
-      authenticated?: boolean;
-    } = {}): Promise<ProductListItem[]> {
-      const { authenticated, attribute_filters, ...query } = params;
+    async getProductsPage(params: ProductListQueryParams = {}): Promise<ProductsResponseData> {
+      const { authenticated, attribute_filters, attribute_option_ids, ...query } = params;
       const qs = new URLSearchParams();
       Object.entries(query).forEach(([k, v]) => {
         if (v !== undefined && v !== null) qs.append(k, String(v));
@@ -132,11 +126,19 @@ export const api = {
       if (attribute_filters && attribute_filters.length) {
         attribute_filters.forEach((f) => qs.append("attribute_filters", f));
       }
+      if (attribute_option_ids && attribute_option_ids.length) {
+        attribute_option_ids.forEach((id) => qs.append("attribute_option_ids", String(id)));
+      }
 
       const res = await apiFetch(`/api/products?${qs.toString()}`, { requiresAuth: !!authenticated });
       if (!res.ok) throw new Error(await parseError(res));
       const productResponse: ProductsResponse = await res.json();
-      return productResponse.data?.items || [];
+      return productResponse.data;
+    },
+
+    async getProducts(params: ProductListQueryParams = {}): Promise<ProductListItem[]> {
+      const pageData = await this.getProductsPage(params);
+      return pageData?.items || [];
     },
 
     async getFilterAttributes(): Promise<ProductFilterAttribute[]> {
@@ -393,11 +395,43 @@ export const api = {
       return res.json();
     },
 
-    async getProducts(collectionId: number, opts: { authenticated?: boolean } = {}) {
-      const { authenticated } = opts;
-      const res = await apiFetch(`/api/collections/${collectionId}/products`, { requiresAuth: !!authenticated });
+    async getProductsPage(collectionId: number, params: CollectionProductsQueryParams = {}): Promise<ProductsResponseData> {
+      const { authenticated, attribute_option_ids, ...query } = params;
+      const qs = new URLSearchParams();
+      Object.entries(query).forEach(([k, v]) => {
+        if (v !== undefined && v !== null) qs.append(k, String(v));
+      });
+      if (attribute_option_ids && attribute_option_ids.length) {
+        attribute_option_ids.forEach((id) => qs.append("attribute_option_ids", String(id)));
+      }
+
+      const suffix = qs.toString();
+      const path = suffix
+        ? `/api/collections/${collectionId}/products?${suffix}`
+        : `/api/collections/${collectionId}/products`;
+
+      const res = await apiFetch(path, { requiresAuth: !!authenticated });
       if (!res.ok) throw new Error(await parseError(res));
-      return res.json();
+      const payload = await res.json();
+
+      if (payload?.data?.items && Array.isArray(payload.data.items)) {
+        return payload.data as ProductsResponseData;
+      }
+
+      // Backward compatibility for older backend shape: { items: [...] }
+      const fallbackItems = Array.isArray(payload?.items) ? payload.items : [];
+      return {
+        page: Number(params.page || 1),
+        page_size: Number(params.page_size || fallbackItems.length || 20),
+        total_count: fallbackItems.length,
+        has_next: false,
+        items: fallbackItems,
+      };
+    },
+
+    async getProducts(collectionId: number, params: CollectionProductsQueryParams = {}) {
+      const pageData = await this.getProductsPage(collectionId, params);
+      return { items: pageData.items };
     },
 
     async addProducts(collectionId: number, productIds: string[]) {

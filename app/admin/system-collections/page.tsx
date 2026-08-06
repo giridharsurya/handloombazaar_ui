@@ -50,17 +50,12 @@ export default function AdminSystemCollectionsPage() {
         if (cancelled) return;
         setCollections(rows || []);
 
-        const catalogProducts = await api.products.getProducts({ page: 1, page_size: 100, authenticated: true });
-        const catalogByDisplayId = new Map((catalogProducts || []).map((item) => [String(item.display_id), item]));
-
         const ribbonEntries = await Promise.all(
           (rows || []).map(async (collection) => {
             try {
               const membersResponse = await api.collections.getProducts(collection.id, { authenticated: true });
-              const memberRows = (membersResponse?.items || membersResponse || []) as Array<{ display_id: string }>;
+              const memberRows = (membersResponse?.items || membersResponse || []) as ProductListItem[];
               const items = memberRows
-                .map((item) => catalogByDisplayId.get(String(item.display_id)))
-                .filter((item): item is ProductListItem => !!item)
                 .slice(0, 12)
                 .map((item) => ({ ...item, id: String(item.display_id) }));
               return [collection.id, items] as const;

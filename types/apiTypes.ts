@@ -147,6 +147,32 @@ export type ProductsResponse = {
   data: ProductsResponseData;
 };
 
+export type ProductListQueryParams = {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  shop_display_id?: string;
+  min_price?: number;
+  max_price?: number;
+  attribute_filters?: string[];
+  attribute_option_ids?: number[];
+  authenticated?: boolean;
+};
+
+export type CollectionProductsQueryParams = {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  min_price?: number;
+  max_price?: number;
+  attribute_option_ids?: number[];
+  mode?: "view" | "add" | "delete";
+  authenticated?: boolean;
+  source_collection_id?: number;
+  source_shop_display_id?: string;
+  shop_display_id?: string;
+};
+
 export type ProductAttributeItem = {
   definition_id: number;
   name: string;

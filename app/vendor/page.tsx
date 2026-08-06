@@ -43,7 +43,12 @@ export default function VendorPage() {
     const fetchVendorData = async () => {
       setLoadingData(true);
       try {
-        const productsData = await api.products.getProducts({ shop_display_id: shopDisplayId, authenticated: true });
+        const productsData = await api.products.getProducts({
+          shop_display_id: shopDisplayId,
+          page: 1,
+          page_size: 5,
+          authenticated: true,
+        });
         setProducts(productsData);
         // Fetch full shop details for ShopDetailsPage
         const shopDetail = await api.shops.getDetail({ display_id: shopDisplayId });

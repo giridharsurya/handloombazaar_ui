@@ -1,13 +1,25 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import SearchBar from "@/components/SearchBar/SearchBar";
 // Navigation links inlined below (removed `NavigationRibbon` component)
 import { LoginButton } from "@/components/Login/LoginButton";
 
+function formatCurrentTime() {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  }).format(new Date());
+}
+
 export default function Header() {
   const headerRef = useRef<HTMLDivElement | null>(null);
+  const [currentTime, setCurrentTime] = useState(() => formatCurrentTime());
 
   useEffect(() => {
     if (!headerRef.current) {
@@ -32,6 +44,14 @@ export default function Header() {
     };
   }, []);
 
+  useEffect(() => {
+    const interval = window.setInterval(() => {
+      setCurrentTime(formatCurrentTime());
+    }, 60000);
+
+    return () => window.clearInterval(interval);
+  }, []);
+
   return (
     <div
       ref={headerRef}
@@ -39,14 +59,19 @@ export default function Header() {
     >
       <div className="w-full pt-4 px-4">
         <div className="relative z-20 w-full flex justify-between items-center mb-2">
-          <div className="flex items-center gap-6">
-            <Link
-              href="/"
-              className="text-3xl font-bold text-gray-900 dark:text-white hover:text-rose-600 transition-colors"
-            >
-              Handloom Bazaar
-            </Link>
-            <div className="w-[500px]">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-6">
+            <div>
+              <Link
+                href="/"
+                className="text-3xl font-bold text-gray-900 dark:text-white hover:text-rose-600 transition-colors"
+              >
+                Handloom Bazaar
+              </Link>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                {currentTime}
+              </p>
+            </div>
+            <div className="w-full max-w-2xl">
               <SearchBar />
             </div>
           </div>
