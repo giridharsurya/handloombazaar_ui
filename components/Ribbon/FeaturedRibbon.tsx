@@ -25,8 +25,11 @@ export default function FeaturedRibbon({ items = [] }: Props) {
       }
       items={items}
       renderItem={(product: RibbonProduct) => (
-        <Product product={product} size="compact" />
+        <div className="min-w-[12.5rem]">
+          <Product product={product} size="default" />
+        </div>
       )}
+      className="!mx-0 !rounded-3xl !border !border-slate-200 !shadow-sm !py-6 !px-6"
     />
   );
 }

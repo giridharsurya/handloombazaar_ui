@@ -626,8 +626,11 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
                       }
                       items={row.items}
                       renderItem={(product: ProductListItem & { id: string }) => (
-                        <Product product={product} size="compact" hideShop={true} />
+                        <div className="min-w-[12.5rem]">
+                        <Product product={product} size="default" hideShop={true} />
+                        </div>
                       )}
+                      className="!mx-0 !rounded-3xl !border !border-slate-200 !shadow-sm !py-6 !px-6"
                     />
                     {row.items.length === 0 ? (
                       <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No products yet in this collection.</p>
@@ -639,8 +642,13 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
           </div>
 
           <div className="px-4 pb-8">
-            <div className="mx-auto">
-              <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">Latest Products</h2>
+            <section className="rounded-3xl border border-slate-200 bg-rose-50 p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-2xl font-bold text-gray-900">Latest Products</h2>
+                  <p className="mt-1 text-sm text-slate-600">Newest arrivals from this shop.</p>
+                </div>
+              </div>
               <ProductGrid
                 products={latestTwentyProducts}
                 hideShop={true}
@@ -648,7 +656,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
                 scope="public"
                 variantMode={false}
               />
-            </div>
+            </section>
           </div>
         </section>
       ) : null}
@@ -678,8 +686,11 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
                     }
                     items={row.items}
                     renderItem={(product: ProductListItem & { id: string }) => (
-                      <Product product={product} size="compact" hideShop={true} />
+                      <div className="min-w-[12.5rem]">
+                        <Product product={product} size="default" hideShop={true} />
+                      </div>
                     )}
+                    className="!mx-0 !rounded-3xl !border !border-slate-200 !shadow-sm !py-6 !px-6"
                   />
                   {row.items.length === 0 ? (
                     <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No products yet in this collection.</p>

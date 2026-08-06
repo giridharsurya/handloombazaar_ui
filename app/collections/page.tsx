@@ -108,8 +108,11 @@ export default function SystemCollectionsPage() {
                   }
                   items={row.items}
                   renderItem={(product: RibbonProduct) => (
-                    <Product product={product} size="compact" hideShop={true} />
+                    <div className="min-w-[12.5rem]">
+                    <Product product={product} size="default" hideShop={true} />
+                    </div>
                   )}
+                  className="!mx-0 !rounded-3xl !border !border-slate-200 !shadow-sm !py-6 !px-6"
                 />
                 {row.items.length === 0 ? (
                   <p className="mt-2 text-sm text-slate-500">No products yet in this collection.</p>

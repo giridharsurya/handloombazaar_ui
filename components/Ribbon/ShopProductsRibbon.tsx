@@ -23,8 +23,11 @@ export default function ShopProductsRibbon({ shop, products }: ShopProductsRibbo
       }
       items={shopProducts}
       renderItem={(product: ProductListItem) => (
-        <Product product={product as ProductListItem} size="compact" hideShop={true} />
+        <div className="min-w-[12.5rem]">
+        <Product product={product as ProductListItem} size="default" hideShop={true} />
+        </div>
       )}
+      className="!mx-0 !rounded-3xl !border !border-slate-200 !shadow-sm !py-6 !px-6"
     />
   );
 }

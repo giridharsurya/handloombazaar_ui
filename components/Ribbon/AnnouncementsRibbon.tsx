@@ -16,7 +16,7 @@ export default function AnnouncementsRibbon({
 }) {
   return (
     <Ribbon
-      className="px-4"
+      // className="px-4"
       items={items}
       renderItem={(it: Ann) => (
         <div className="announcement-item flex-shrink-0" style={{ width: 'calc(50% - 0.5rem)' }}>
@@ -46,6 +46,7 @@ export default function AnnouncementsRibbon({
           )}
         </div>
       )}
+      className="!mx-0 !rounded-3xl !border !border-slate-200 !shadow-sm !py-6 !px-6"
     />
   );
 }

@@ -29,6 +29,7 @@ export default function ShopRibbon({ shops, onShopClick }: Props) {
       renderItem={(shop) => (
         <Icon imageUrl={shop.shop_logo_url} label={shop.name} onClick={() => onShopClick?.(shop)} variant="shop" />
       )}
+      className="!mx-0 !rounded-3xl !border !border-slate-200 !shadow-sm !py-6 !px-6"
     />
   );
 }

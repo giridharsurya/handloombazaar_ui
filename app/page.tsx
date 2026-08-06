@@ -106,14 +106,14 @@ export default function Home() {
 
           <FeaturedRibbon items={featuredProducts.slice(0, 6)} />
 
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+          <section className="rounded-3xl border border-slate-200 bg-rose-50 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Latest Products</h2>
                 <p className="mt-1 text-sm text-slate-600">Newest arrivals from our artisans.</p>
               </div>
-              <Link href="/featured" className="text-sm text-rose-600 hover:underline">
-                View featured
+              <Link href="/sarees" className="text-sm text-rose-600 hover:underline">
+                View latest
               </Link>
             </div>
             <ProductGrid products={latestProducts} hideShop={false} showCheckboxes={false} scope="public" />

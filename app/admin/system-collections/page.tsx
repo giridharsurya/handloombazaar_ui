@@ -113,8 +113,11 @@ export default function AdminSystemCollectionsPage() {
                   }
                   items={row.items}
                   renderItem={(product: RibbonProduct) => (
-                    <Product product={product} size="compact" hideShop={true} />
+                    <div className="min-w-[12.5rem]">
+                      <Product product={product} size="default" hideShop={true} />
+                    </div>
                   )}
+                  className="!mx-0 !rounded-3xl !border !border-slate-200 !shadow-sm !py-6 !px-6"
                 />
                 {!row.collection.is_active ? (
                   <p className="mt-2 text-xs font-medium text-amber-700">This collection is currently inactive.</p>
