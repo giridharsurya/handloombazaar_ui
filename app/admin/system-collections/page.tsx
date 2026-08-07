@@ -107,7 +107,7 @@ export default function AdminSystemCollectionsPage() {
                 <Ribbon
                   title={row.collection.name}
                   action={
-                    <Link href={`/admin/system-collections/${row.collection.id}`} className="text-sm text-rose-600 hover:underline">
+                    <Link href={`/admin/system-collections/${row.collection.id}`} className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100">
                       View all
                     </Link>
                   }

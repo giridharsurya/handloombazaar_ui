@@ -6,7 +6,7 @@ import SelectionToolbar from "@/components/Product/SelectionToolbar";
 import SareesFilter, { FilterState } from "@/components/Filters/SareesFilter";
 import FilterHeader from "@/components/FilterHeader/FilterHeader";
 import Pagination from "@/components/Product/Pagination";
-import { ProductFilterAttribute, ProductListItem } from "@/types/apiTypes";
+import { Collection, ProductFilterAttribute, ProductListItem } from "@/types/apiTypes";
 import { useApi } from "@/lib/ApiProvider";
 
 export default function FeaturedPage() {
@@ -17,6 +17,7 @@ export default function FeaturedPage() {
     priceRange: [0, 25000],
     selectedAttributeOptionIds: {},
   });
+  const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest">("newest");
   const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>([]);
   const [pageProducts, setPageProducts] = useState<ProductListItem[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
@@ -77,7 +78,7 @@ export default function FeaturedPage() {
       setLoadingProducts(true);
       setProductsError("");
       try {
-        const collections = await api.collections.list({ kind: "system", authenticated: false });
+        const collections = (await api.collections.list({ kind: "system", authenticated: false })) as Collection[];
         if (cancelled) return;
 
         const featured = collections.find(
@@ -97,11 +98,13 @@ export default function FeaturedPage() {
           page_size: itemsPerPage,
           min_price: filters.priceRange[0],
           max_price: filters.priceRange[1],
+          sort_by: sortBy,
           attribute_option_ids: selectedAttributeOptionIds,
         });
 
         if (cancelled) return;
-        setPageProducts(pageData.items || []);
+        const activeItems = (pageData.items || []).filter((item) => item.is_active !== false);
+        setPageProducts(activeItems);
         setTotalProducts(pageData.total_count || 0);
       } catch (err) {
         if (cancelled) return;
@@ -119,7 +122,7 @@ export default function FeaturedPage() {
     return () => {
       cancelled = true;
     };
-  }, [api, currentPage, itemsPerPage, filters, selectedAttributeOptionIds]);
+  }, [api, currentPage, itemsPerPage, filters, selectedAttributeOptionIds, sortBy]);
 
   useEffect(() => {
     let mounted = true;
@@ -140,10 +143,13 @@ export default function FeaturedPage() {
     };
   }, [api]);
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters or sort order change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, sortBy]);
+
   const handleFilterChange = (nextFilters: FilterState) => {
     setFilters(nextFilters);
-    setCurrentPage(1);
   };
 
   return (
@@ -155,6 +161,8 @@ export default function FeaturedPage() {
           showFiltersToggle={true}
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
           isSticky={isHeaderSticky}
         />
 

@@ -29,7 +29,7 @@ export default function SareesFilter({ attributes, value, onFilterChange }: Sare
   const externalFilters = value ?? DEFAULT_FILTERS;
   const hasPendingChanges = JSON.stringify(draftFilters) !== JSON.stringify(externalFilters);
   const hasActiveFilters = JSON.stringify(externalFilters) !== JSON.stringify(DEFAULT_FILTERS);
-  const applyButtonLabel = hasPendingChanges ? "Apply Filters" : "Filters Applied";
+  const applyButtonLabel = hasPendingChanges || !hasActiveFilters ? "Apply Filters" : "Filters Applied";
   const resetButtonClassName = hasActiveFilters
     ? "flex-1 rounded-md border border-rose-600 bg-white px-4 py-2 text-sm font-medium text-rose-700 hover:bg-rose-50 dark:bg-gray-800 dark:text-rose-300 dark:hover:border-rose-500"
     : "flex-1 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-rose-600 hover:text-rose-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-rose-500";

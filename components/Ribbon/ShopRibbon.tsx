@@ -21,8 +21,8 @@ export default function ShopRibbon({ shops, onShopClick }: Props) {
     <Ribbon
       title="Shops"
       action={
-        <Link href="/shops" className="text-sm text-rose-600 hover:underline">
-          View shops
+        <Link href="/shops" className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100">
+          View all
         </Link>
       }
       items={shops}

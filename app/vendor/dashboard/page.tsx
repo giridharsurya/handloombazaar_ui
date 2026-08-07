@@ -5,7 +5,7 @@ import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import api from "@/lib/api";
-import ShopEditableFields, { ShopEditableValues } from "@/components/Shop/ShopEditableFields";
+import type { ShopEditableValues } from "@/components/Shop/ShopEditableFields";
 
 export default function ShopDashboard() {
   const { auth, isLoading } = useAuth();
@@ -155,104 +155,85 @@ export default function ShopDashboard() {
     return null;
   }
 
+  const isApproved = shopStatus?.approved ?? false;
+  const cardBaseClass = "rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition duration-150";
+  const cardEnabledClass = "hover:shadow-md cursor-pointer";
+  const cardDisabledClass = "opacity-60 cursor-not-allowed";
+
   return (
-    <div className="min-h-screen bg-slate-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-4xl">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-slate-900">Shop Dashboard</h1>
-          <p className="mt-2 text-lg text-slate-600">
-            Welcome, <strong>{shopForm?.name || shopStatus?.name || auth.shop_name}</strong>
-          </p>
-        </div>
-
-        {/* Approval Status */}
-        {!(shopStatus?.approved ?? false) && (
-          <div className="mb-6 rounded-lg border border-yellow-300 bg-yellow-50 p-4">
-            <p className="text-sm text-yellow-800">
-              ⏳ <strong>Pending Approval:</strong> Your shop is pending admin approval. Once
-              approved, you&apos;ll be able to add products and manage your shop.
-            </p>
+    <main className="min-h-screen bg-slate-50 text-slate-900">
+      <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        <header className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+          <div className="sm:flex sm:items-start sm:justify-between">
+            <div>
+              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Vendor Dashboard</p>
+              <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">{shopForm?.name || shopStatus?.name || auth.shop_name}</h1>
+              <p className="mt-2 text-sm text-slate-600">
+                {isApproved
+                  ? "Your shop is approved. You can manage your products, settings, and collections."
+                  : "Your shop is pending approval. Dashboard actions are disabled until approval is complete."}
+              </p>
+            </div>
+            <div className="mt-4 flex items-center gap-3 sm:mt-0">
+              <Link href="/vendor" className={`inline-flex items-center rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white ${isApproved ? "hover:bg-slate-700" : "opacity-60 cursor-not-allowed"}`} aria-disabled={!isApproved}>
+                Go to Vendor Page
+              </Link>
+            </div>
           </div>
-        )}
+          <div className="mt-5 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-medium">
+            <span className={`inline-flex h-2.5 w-2.5 rounded-full ${isApproved ? "bg-emerald-500" : "bg-amber-500"}`} />
+            {isApproved ? "Approved" : "Pending Approval"}
+          </div>
+        </header>
 
-        {/* Available Actions */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          {/* Add Products */}
-          {shopStatus?.approved ?? false ? (
-            <Link href="/vendor/products/add">
-              <div className="cursor-pointer rounded-lg border border-slate-300 bg-white p-6 shadow-sm transition hover:shadow-md">
-                <h2 className="text-xl font-bold text-slate-900">Add Product</h2>
-                <p className="mt-2 text-slate-600">Create and list new products in your shop</p>
-                <p className="mt-4 text-sm font-semibold text-slate-900 flex items-center">Get Started →</p>
-              </div>
+        <section className="grid gap-4 sm:grid-cols-2">
+          {isApproved ? (
+            <Link href="/vendor/products/add" className={`${cardBaseClass} ${cardEnabledClass}`}>
+              <h2 className="text-xl font-semibold text-slate-900">Add Product</h2>
+              <p className="mt-2 text-sm text-slate-600">Create and list new products in your shop.</p>
+              <p className="mt-4 text-sm font-semibold text-slate-900">Get Started →</p>
             </Link>
           ) : (
-            <div className="rounded-lg border border-slate-300 bg-white p-6 opacity-60">
-              <h2 className="text-xl font-bold text-slate-900">Add Product</h2>
-              <p className="mt-2 text-slate-600">Create and list new products in your shop</p>
+            <div className={`${cardBaseClass} ${cardDisabledClass}`}>
+              <h2 className="text-xl font-semibold text-slate-900">Add Product</h2>
+              <p className="mt-2 text-sm text-slate-600">Create and list new products in your shop.</p>
               <p className="mt-4 text-sm text-slate-500">Available after approval</p>
             </div>
           )}
 
-          {/* Shop Settings */}
-          <Link href="/vendor/settings">
-            <div className="cursor-pointer rounded-lg border border-slate-300 bg-white p-6 shadow-sm transition hover:shadow-md">
-              <h2 className="text-xl font-bold text-slate-900">Shop Settings</h2>
-              <p className="mt-2 text-slate-600">
-                Update your shop information and preferences
-              </p>
-              <p className="mt-4 text-sm font-semibold text-slate-900 flex items-center">
-                Go to Settings →
-              </p>
-            </div>
-          </Link>
-
-          {/* Analytics */}
-          <Link href="/vendor">
-            <div className="cursor-pointer rounded-lg border border-slate-300 bg-white p-6 shadow-sm transition hover:shadow-md">
-              <h2 className="text-xl font-bold text-slate-900">Analytics</h2>
-              <p className="mt-2 text-slate-600">
-                View sales, traffic, and other shop statistics
-              </p>
-              <p className="mt-4 text-sm font-semibold text-slate-900 flex items-center">
-                View Analytics →
-              </p>
-            </div>
-          </Link>
-          {/* Collections (vendor) */}
-          <Link href="/vendor/collections">
-            <div className="cursor-pointer rounded-lg border border-slate-300 bg-white p-6 shadow-sm transition hover:shadow-md">
-              <h2 className="text-xl font-bold text-slate-900">Collections</h2>
-              <p className="mt-2 text-slate-600">Create and manage your shop collections</p>
-              <p className="mt-4 text-sm font-semibold text-slate-900 flex items-center">Manage Collections →</p>
-            </div>
-          </Link>
-        </div>
-
-        {/* Shop Info */}
-        <div className="mt-12 rounded-lg border border-slate-300 bg-white p-6">
-          <h2 className="text-xl font-bold text-slate-900 mb-4">Shop Information</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div>
-              <p className="text-sm text-slate-600">Shop Name</p>
-              <p className="text-lg font-semibold text-slate-900">{auth.shop_name}</p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-600">Email</p>
-              <p className="text-lg font-semibold text-slate-900">{auth.email}</p>
-            </div>
-            <div>
-              <p className="text-sm text-slate-600">Status</p>
-              <p className={`text-lg font-semibold ${shopStatus?.approved ? 'text-green-600' : 'text-yellow-600'}`}>
-                {shopStatus?.approved ? "Approved" : "Pending Approval"}
-              </p>
-            </div>
+          <div className={`${cardBaseClass} ${isApproved ? cardEnabledClass : cardDisabledClass}`}>
+            {isApproved ? (
+              <Link href="/vendor/settings" className="block">
+                <h2 className="text-xl font-semibold text-slate-900">Shop Settings</h2>
+                <p className="mt-2 text-sm text-slate-600">Update your shop information and preferences.</p>
+                <p className="mt-4 text-sm font-semibold text-slate-900">Go to Settings →</p>
+              </Link>
+            ) : (
+              <>
+                <h2 className="text-xl font-semibold text-slate-900">Shop Settings</h2>
+                <p className="mt-2 text-sm text-slate-600">Update your shop information and preferences.</p>
+                <p className="mt-4 text-sm text-slate-500">Available after approval</p>
+              </>
+            )}
           </div>
-        </div>
 
-        {/* Collections moved to dedicated page: /vendor/collections */}
+          <div className={`${cardBaseClass} ${isApproved ? cardEnabledClass : cardDisabledClass}`}>
+            {isApproved ? (
+              <Link href="/vendor/collections" className="block">
+                <h2 className="text-xl font-semibold text-slate-900">Collections</h2>
+                <p className="mt-2 text-sm text-slate-600">Create and manage your shop collections.</p>
+                <p className="mt-4 text-sm font-semibold text-slate-900">Manage Collections →</p>
+              </Link>
+            ) : (
+              <>
+                <h2 className="text-xl font-semibold text-slate-900">Collections</h2>
+                <p className="mt-2 text-sm text-slate-600">Create and manage your shop collections.</p>
+                <p className="mt-4 text-sm text-slate-500">Available after approval</p>
+              </>
+            )}
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

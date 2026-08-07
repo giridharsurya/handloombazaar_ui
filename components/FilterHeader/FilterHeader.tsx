@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 
-type SortOption = "relevance" | "price-low" | "price-high" | "newest";
+type SortOption = "price-low" | "price-high" | "newest";
 
 type FilterHeaderProps = {
   pageTitle: string;
@@ -10,6 +10,7 @@ type FilterHeaderProps = {
   showFiltersToggle?: boolean;
   onToggleFilters?: () => void;
   filtersOpen?: boolean;
+  sortBy?: SortOption;
   onSortChange?: (sort: SortOption) => void;
   isSticky?: boolean;
 };
@@ -20,11 +21,18 @@ export default function FilterHeader({
   showFiltersToggle = true,
   onToggleFilters,
   filtersOpen = true,
+  sortBy: sortByProp,
   onSortChange,
   isSticky = true,
 }: FilterHeaderProps) {
-  const [sortBy, setSortBy] = useState<SortOption>("relevance");
+  const [sortBy, setSortBy] = useState<SortOption>("newest");
   const headerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (sortByProp) {
+      setSortBy(sortByProp);
+    }
+  }, [sortByProp]);
 
   useEffect(() => {
     if (!headerRef.current) {
@@ -104,7 +112,6 @@ export default function FilterHeader({
               onChange={handleSortChange}
               className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
             >
-              <option value="relevance">Relevance</option>
               <option value="price-low">Price: Low to High</option>
               <option value="price-high">Price: High to Low</option>
               <option value="newest">Newest</option>

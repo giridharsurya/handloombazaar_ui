@@ -7,14 +7,20 @@ import SearchBar from "@/components/SearchBar/SearchBar";
 import { LoginButton } from "@/components/Login/LoginButton";
 
 function formatCurrentTime() {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    hour: "numeric",
+  const now = new Date();
+
+  const weekday = now.toLocaleDateString("en-US", { weekday: "long" });
+  const day = String(now.getDate()).padStart(2, "0");
+  const month = now.toLocaleDateString("en-US", { month: "long" });
+  const year = now.getFullYear();
+
+  const time = now.toLocaleTimeString("en-US", {
+    hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-  }).format(new Date());
+  });
+
+  return `${weekday} ${day}-${month}-${year} ${time}`;
 }
 
 export default function Header() {
@@ -58,8 +64,8 @@ export default function Header() {
       className="fixed top-0 left-0 right-0 w-full bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 z-50"
     >
       <div className="w-full pt-4 px-4">
-        <div className="relative z-20 w-full flex justify-between items-center mb-2">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-6">
+        <div className="relative z-20 w-full flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-6 w-full">
             <div>
               <Link
                 href="/"
@@ -67,15 +73,15 @@ export default function Header() {
               >
                 Handloom Bazaar
               </Link>
-              <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                {currentTime}
-              </p>
             </div>
             <div className="w-full max-w-2xl">
               <SearchBar />
             </div>
           </div>
-          <div className="flex-shrink-0">
+          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+            <p className="text-sm text-slate-600 dark:text-slate-300">
+              {currentTime}
+            </p>
             <LoginButton />
           </div>
         </div>

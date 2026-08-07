@@ -47,6 +47,7 @@ function CollectionDetailsPage({
     priceRange: [0, 25000],
     selectedAttributeOptionIds: {},
   });
+  const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest">("newest");
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
@@ -82,6 +83,7 @@ function CollectionDetailsPage({
           page_size: itemsPerPage,
           min_price: filters.priceRange[0],
           max_price: filters.priceRange[1],
+          sort_by: sortBy,
           attribute_option_ids: selectedAttributeOptionIds,
           source_collection_id: queryMode !== "view" ? collection.id : undefined,
         });
@@ -102,16 +104,16 @@ function CollectionDetailsPage({
     return () => {
       cancelled = true;
     };
-  }, [api, currentPage, itemsPerPage, filters, selectedAttributeOptionIds, queryCollectionId, queryMode]);
+  }, [api, currentPage, itemsPerPage, filters, sortBy, selectedAttributeOptionIds, queryCollectionId, queryMode]);
 
   useEffect(() => {
     setAllProducts(pageProducts);
   }, [pageProducts, setAllProducts]);
 
-  // Reset to page 1 when filters or action mode changes
+  // Reset to page 1 when filters, sort order, or action mode changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters, queryCollectionId, queryMode]);
+  }, [filters, sortBy, queryCollectionId, queryMode]);
 
   useEffect(() => {
     let mounted = true;
@@ -172,6 +174,8 @@ function CollectionDetailsPage({
           showFiltersToggle={true}
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
           isSticky={isHeaderSticky}
         />
 

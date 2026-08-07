@@ -44,6 +44,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     priceRange: [0, 25000],
     selectedAttributeOptionIds: {},
   });
+  const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest">("newest");
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
@@ -146,6 +147,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
           page_size: itemsPerPage,
           min_price: filters.priceRange[0],
           max_price: filters.priceRange[1],
+          sort_by: sortBy,
           attribute_option_ids: selectedAttributeOptionIds,
         } as const;
 
@@ -157,11 +159,12 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
             source_shop_display_id: actionCollectionQuery.mode !== "view" ? shop.display_id : undefined,
           });
         } else if (selectedCollectionKey) {
-          const [, collectionIdValue] = selectedCollectionKey.split(":");
+          const [source, collectionIdValue] = selectedCollectionKey.split(":");
           const selectedCollectionId = Number(collectionIdValue);
           pageData = await api.collections.getProductsPage(selectedCollectionId, {
             ...baseParams,
             mode: "view",
+            shop_display_id: source === "system" ? shop.display_id : undefined,
           });
         } else {
           pageData = await api.products.getProductsPage({
@@ -200,6 +203,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     itemsPerPage,
     filters,
     selectedAttributeOptionIds,
+    sortBy,
     actionCollectionQuery,
     selectedCollectionKey,
     scope,
@@ -219,10 +223,10 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     setAllProducts(shouldUseServerProducts ? visibleProducts : filteredProducts);
   }, [filteredProducts, shouldUseServerProducts, visibleProducts, setAllProducts]);
 
-  // Reset to page 1 when filters or collection changes
+  // Reset to page 1 when filters, sort order, or collection changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters, selectedCollectionKey, actionCollectionQuery]);
+  }, [filters, sortBy, selectedCollectionKey, actionCollectionQuery]);
 
   const paginationOffset = (currentPage - 1) * itemsPerPage;
   const paginatedProducts = shouldUseServerProducts
@@ -427,7 +431,8 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     };
   }, [showFilters]);
 
-  const tabButtons: Array<{ key: "products" | "collections" | "about"; label: string }> = [
+  const tabButtons: Array<{ key: "overview" | "products" | "collections" | "about"; label: string }> = [
+    { key: "overview", label: "Overview" },
     { key: "products", label: "Products" },
     { key: "collections", label: "Collections" },
     { key: "about", label: "About" },
@@ -510,12 +515,22 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
   const openCollectionProducts = (collectionKey: string) => {
     setSelectedCollectionKey(collectionKey);
     setActiveTab("products");
-    productsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const openProductsTab = () => {
+    setSelectedCollectionKey(null);
+    setActiveTab("products");
+  };
+
+  const openOverviewTab = () => {
+    setSelectedCollectionKey(null);
+    setActiveTab("overview");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
     <main className="min-h-screen bg-white dark:bg-gray-950">
-      <section className="px-4 pt-4 pb-6">
+      <section className="px-4 pb-0">
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-white via-rose-50/40 to-amber-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 p-4 lg:p-5">
           <div className="mx-auto w-full flex flex-col gap-4">
             <div className="w-full flex items-start gap-4">
@@ -569,23 +584,25 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
         <div className="relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] w-screen">
           <nav className="bg-rose-600 text-white py-1">
             <div className="mx-auto flex max-w-6xl items-center justify-center gap-6">
-              {tabButtons.map((tab) => {
-                const isActive = activeTab === tab.key;
-                return (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setActiveTab(tab.key)}
-                    className={`px-3 py-1 rounded transition-colors ${
-                      isActive
-                        ? "bg-white text-rose-600"
-                        : "text-white hover:bg-rose-500"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                );
-              })}
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {tabButtons.map((tab) => {
+                  const isActive = activeTab === tab.key;
+                  return (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setActiveTab(tab.key)}
+                      className={`px-3 py-1 rounded transition-colors ${
+                        isActive
+                          ? "bg-white text-rose-600"
+                          : "text-white hover:bg-rose-500"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </nav>
         </div>
@@ -619,7 +636,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
                         <button
                           type="button"
                           onClick={() => openCollectionProducts(row.key)}
-                          className="text-sm text-rose-600 hover:underline"
+                          className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100"
                         >
                           View all
                         </button>
@@ -643,10 +660,19 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
 
           <div className="px-4 pb-8">
             <section className="rounded-3xl border border-slate-200 bg-rose-50 p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
+              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
                 <div>
                   <h2 className="text-2xl font-bold text-gray-900">Latest Products</h2>
                   <p className="mt-1 text-sm text-slate-600">Newest arrivals from this shop.</p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={openProductsTab}
+                    className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100"
+                  >
+                    View all
+                  </button>
                 </div>
               </div>
               <ProductGrid
@@ -679,7 +705,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
                       <button
                         type="button"
                         onClick={() => openCollectionProducts(row.key)}
-                        className="text-sm text-rose-600 hover:underline"
+                        className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100"
                       >
                         View all
                       </button>
@@ -762,11 +788,13 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
 
           <section ref={productsSectionRef}>
             <FilterHeader
-              pageTitle={selectedCollectionName ? `${shop.name} - ${selectedCollectionName}` : shop.name}
+              pageTitle={selectedCollectionName ? selectedCollectionName : shop.name}
               productCount={shouldUseServerProducts ? serverTotalProducts : visibleProducts.length}
               showFiltersToggle={true}
               onToggleFilters={() => setShowFilters(!showFilters)}
               filtersOpen={showFilters}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
               isSticky={isHeaderSticky}
             />
 

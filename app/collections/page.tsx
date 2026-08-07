@@ -34,7 +34,7 @@ export default function SystemCollectionsPage() {
       try {
         const rows = await api.collections.list({
           kind: "system",
-          authenticated: isAdmin,
+          authenticated: false,
         });
         if (cancelled) return;
         const nextCollections = (rows || []) as Collection[];
@@ -44,15 +44,17 @@ export default function SystemCollectionsPage() {
           nextCollections.map(async (collection) => {
             try {
               const pageData = await api.collections.getProductsPage(collection.id, {
-                authenticated: isAdmin,
+                authenticated: false,
                 page: 1,
                 page_size: 12,
               });
               const items = (pageData?.items || []) as ProductListItem[];
-              const normalizedItems = items.map((item) => ({
-                ...item,
-                id: String(item.display_id),
-              }));
+              const normalizedItems = items
+                .filter((item) => item.is_active !== false)
+                .map((item) => ({
+                  ...item,
+                  id: String(item.display_id),
+                }));
               return [collection.id, normalizedItems] as const;
             } catch {
               return [collection.id, [] as RibbonProduct[]] as const;
@@ -102,7 +104,7 @@ export default function SystemCollectionsPage() {
                 <Ribbon
                   title={row.collection.name}
                   action={
-                    <Link href={`/collections/${row.collection.id}`} className="text-sm text-rose-600 hover:underline">
+                    <Link href={`/collections/${row.collection.id}`} className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100">
                       View all
                     </Link>
                   }

@@ -32,6 +32,7 @@ function AllProductsPageInner() {
     priceRange: [0, 25000],
     selectedAttributeOptionIds: {},
   });
+  const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest">("newest");
   const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>([]);
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
@@ -73,6 +74,7 @@ function AllProductsPageInner() {
           page_size: itemsPerPage,
           min_price: filters.priceRange[0],
           max_price: filters.priceRange[1],
+          sort_by: sortBy,
           attribute_option_ids: selectedAttributeOptionIds,
           authenticated: true,
         } as const;
@@ -102,7 +104,7 @@ function AllProductsPageInner() {
     return () => {
       cancelled = true;
     };
-  }, [api, auth, isLoading, currentPage, filters, selectedAttributeOptionIds, itemsPerPage, actionCollectionQuery]);
+  }, [api, auth, isLoading, currentPage, filters, sortBy,selectedAttributeOptionIds, itemsPerPage, actionCollectionQuery]);
 
   const visibleProducts = useMemo(() => {
     if (actionCollectionQuery) return pageProducts;
@@ -118,7 +120,7 @@ function AllProductsPageInner() {
   // Reset to page 1 when filters or action collection mode changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters, actionCollectionQuery]);
+  }, [filters, sortBy, actionCollectionQuery]);
 
   useEffect(() => {
     let mounted = true;
@@ -197,6 +199,8 @@ function AllProductsPageInner() {
           showFiltersToggle={true}
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
           isSticky={isHeaderSticky}
         />
 

@@ -31,6 +31,7 @@ function SystemCollectionProductsInner() {
     priceRange: [0, 25000],
     selectedAttributeOptionIds: {},
   });
+  const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest">("newest");
   const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>([]);
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
@@ -102,6 +103,7 @@ function SystemCollectionProductsInner() {
           page_size: itemsPerPage,
           min_price: filters.priceRange[0],
           max_price: filters.priceRange[1],
+          sort_by: sortBy,
           attribute_option_ids: selectedAttributeOptionIds,
         });
 
@@ -124,7 +126,7 @@ function SystemCollectionProductsInner() {
     return () => {
       cancelled = true;
     };
-  }, [api, collectionId, currentPage, itemsPerPage, filters, selectedAttributeOptionIds]);
+  }, [api, collectionId, currentPage, itemsPerPage, filters, selectedAttributeOptionIds, sortBy]);
 
   useEffect(() => {
     let mounted = true;
@@ -176,10 +178,10 @@ function SystemCollectionProductsInner() {
     };
   }, [showFilters]);
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters or sort order change
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters]);
+  }, [filters, sortBy]);
 
   if (loading) {
     return <div className="px-4 py-6 text-sm text-slate-600">Loading collection...</div>;
@@ -202,6 +204,8 @@ function SystemCollectionProductsInner() {
           showFiltersToggle={true}
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
+          sortBy={sortBy}
+          onSortChange={setSortBy}
           isSticky={isHeaderSticky}
         />
 

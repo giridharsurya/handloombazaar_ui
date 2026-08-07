@@ -70,7 +70,7 @@ export default function Home() {
           page_size: 8,
         });
         if (!mounted) return;
-        setFeaturedProducts(pageData.items || []);
+        setFeaturedProducts((pageData.items || []).filter((item) => item.is_active !== false));
       } catch (error) {
         console.error("Failed to load featured collection products", error);
       }
@@ -112,8 +112,8 @@ export default function Home() {
                 <h2 className="text-2xl font-bold text-gray-900">Latest Products</h2>
                 <p className="mt-1 text-sm text-slate-600">Newest arrivals from our artisans.</p>
               </div>
-              <Link href="/sarees" className="text-sm text-rose-600 hover:underline">
-                View latest
+              <Link href="/sarees" className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100">
+                View all
               </Link>
             </div>
             <ProductGrid products={latestProducts} hideShop={false} showCheckboxes={false} scope="public" />

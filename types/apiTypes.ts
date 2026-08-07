@@ -154,6 +154,7 @@ export type ProductListQueryParams = {
   shop_display_id?: string;
   min_price?: number;
   max_price?: number;
+  sort_by?: "newest" | "price-low" | "price-high";
   attribute_filters?: string[];
   attribute_option_ids?: number[];
   authenticated?: boolean;
@@ -165,6 +166,7 @@ export type CollectionProductsQueryParams = {
   search?: string;
   min_price?: number;
   max_price?: number;
+  sort_by?: "newest" | "price-low" | "price-high";
   attribute_option_ids?: number[];
   mode?: "view" | "add" | "delete";
   authenticated?: boolean;

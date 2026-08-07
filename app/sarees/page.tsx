@@ -19,6 +19,7 @@ export default function SareesPage() {
     priceRange: [0, 25000],
     selectedAttributeOptionIds: {},
   });
+  const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest">("newest");
 
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
@@ -92,6 +93,7 @@ export default function SareesPage() {
               page_size: itemsPerPage,
               min_price: filters.priceRange[0],
               max_price: filters.priceRange[1],
+              sort_by: sortBy,
               attribute_option_ids: selectedAttributeOptionIds,
             });
           } else {
@@ -110,6 +112,7 @@ export default function SareesPage() {
             page_size: itemsPerPage,
             min_price: filters.priceRange[0],
             max_price: filters.priceRange[1],
+            sort_by: sortBy,
             attribute_option_ids: selectedAttributeOptionIds,
           });
         }
@@ -133,7 +136,7 @@ export default function SareesPage() {
     return () => {
       cancelled = true;
     };
-  }, [api, currentPage, itemsPerPage, filters, selectedAttributeOptionIds, collectionIdParam]);
+  }, [api, currentPage, itemsPerPage, filters, selectedAttributeOptionIds, collectionIdParam, sortBy]);
 
   useEffect(() => {
     let mounted = true;
@@ -186,10 +189,10 @@ export default function SareesPage() {
     };
   }, [api, collectionIdParam]);
 
-  // Reset to page 1 when filters or collection changes
+  // Reset to page 1 when filters, sort, or collection changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [filters, collectionIdParam]);
+  }, [filters, sortBy, collectionIdParam]);
 
   return (
     <main className="min-h-screen bg-white dark:bg-gray-950">
@@ -200,6 +203,8 @@ export default function SareesPage() {
           showFiltersToggle={true}
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
+          sortBy={sortBy}
+          onSortChange={(sort) => setSortBy(sort)}
           isSticky={isHeaderSticky}
         />
 
