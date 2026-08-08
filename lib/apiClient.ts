@@ -33,6 +33,17 @@ export async function apiFetch(
     headers["Authorization"] = `Bearer ${authToken}`;
   }
 
+  try {
+    if (typeof window !== "undefined") {
+      const visitorToken = localStorage.getItem("visitor_token");
+      if (visitorToken) {
+        headers["X-Visitor-Token"] = visitorToken;
+      }
+    }
+  } catch (e) {
+    // ignore storage errors
+  }
+
   const url = endpoint.startsWith("http") ? endpoint : `${API_BASE_URL}${endpoint}`;
 
   // notify global loader if available
@@ -49,6 +60,18 @@ export async function apiFetch(
       ...rest,
       headers,
     });
+
+    try {
+      if (typeof window !== "undefined") {
+        const responseVisitorToken = res.headers.get("X-Visitor-Token");
+        if (responseVisitorToken) {
+          localStorage.setItem("visitor_token", responseVisitorToken);
+        }
+      }
+    } catch (e) {
+      // ignore storage errors
+    }
+
     return res;
   } finally {
     if (!suppressGlobalLoading && typeof window !== "undefined") {

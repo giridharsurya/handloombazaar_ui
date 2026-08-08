@@ -99,6 +99,7 @@ function SystemCollectionProductsInner() {
         const pageData = await api.collections.getProductsPage(collectionId, {
           authenticated: false,
           mode: "view",
+          track_view: true,
           page: currentPage,
           page_size: itemsPerPage,
           min_price: filters.priceRange[0],

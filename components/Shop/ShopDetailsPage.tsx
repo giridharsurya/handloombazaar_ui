@@ -34,6 +34,130 @@ type ShopDetailsPageProps = {
   actionsSidebar?: React.ReactNode;
 };
 
+const shopCollectionsCache = new Map<string, { collections: ShopCollectionItem[]; collectionMembers: Record<string, CollectionMemberItem[]> }>();
+const shopCollectionsPromise = new Map<string, Promise<{ collections: ShopCollectionItem[]; collectionMembers: Record<string, CollectionMemberItem[]> }>>();
+const shopAnnouncementsCache = new Map<string, AnnouncementBanner[]>();
+const shopAnnouncementsPromise = new Map<string, Promise<AnnouncementBanner[]>>();
+let filterAttributesCache: ProductFilterAttribute[] | null = null;
+let filterAttributesPromise: Promise<ProductFilterAttribute[]> | null = null;
+
+async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: string, isManagedScope: boolean) {
+  const cacheKey = `${shopId}:${isManagedScope ? "managed" : "public"}`;
+
+  if (shopCollectionsCache.has(cacheKey)) {
+    return shopCollectionsCache.get(cacheKey)!;
+  }
+
+  if (shopCollectionsPromise.has(cacheKey)) {
+    return await shopCollectionsPromise.get(cacheKey)!;
+  }
+
+  const promise = (async () => {
+    const shopCollectionRows = await api.collections.list({
+      kind: "shop",
+      shop_display_id: shopId,
+      authenticated: isManagedScope,
+    });
+
+    const systemCollectionRows = await api.collections.list({
+      kind: "system",
+      authenticated: isManagedScope,
+    });
+
+    const normalizedShopCollections: ShopCollectionItem[] = ((shopCollectionRows || []) as Array<Omit<ShopCollectionItem, "source">>)
+      .map((item) => ({ ...item, source: "shop" as const }));
+    const normalizedSystemCollections: ShopCollectionItem[] = ((systemCollectionRows || []) as Array<Omit<ShopCollectionItem, "source">>)
+      .map((item) => ({ ...item, source: "system" as const }));
+
+    const memberEntries = await Promise.all(
+      [...normalizedShopCollections, ...normalizedSystemCollections].map(async (collectionItem) => {
+        const collectionKey = `${collectionItem.source}:${collectionItem.id}`;
+        try {
+          const pageData = await api.collections.getProductsPage(collectionItem.id, {
+            authenticated: isManagedScope,
+            page: 1,
+            page_size: 100,
+            shop_display_id: collectionItem.source === "system" ? shopId : undefined,
+          });
+          const items = (pageData?.items || []) as ProductListItem[];
+          const normalizedItems = items.map((it) => ({
+            ...it,
+            id: `${collectionItem.source}-${collectionItem.id}-${it.display_id}`,
+          } as CollectionMemberItem));
+          return [collectionItem, collectionKey, normalizedItems] as const;
+        } catch (err) {
+          console.warn(`[ShopDetailsPage] Failed to load collection ${collectionItem.id} products:`, err);
+          return [collectionItem, collectionKey, [] as CollectionMemberItem[]] as const;
+        }
+      })
+    );
+
+    const memberMap: Record<string, CollectionMemberItem[]> = {};
+    const validCollections: ShopCollectionItem[] = [];
+
+    memberEntries.forEach(([collectionItem, key, items]) => {
+      memberMap[key] = items;
+      if (collectionItem.source === "shop" || items.length > 0) {
+        validCollections.push(collectionItem);
+      }
+    });
+
+    return { collections: validCollections, collectionMembers: memberMap };
+  })();
+
+  shopCollectionsPromise.set(cacheKey, promise);
+
+  try {
+    const value = await promise;
+    shopCollectionsCache.set(cacheKey, value);
+    return value;
+  } finally {
+    shopCollectionsPromise.delete(cacheKey);
+  }
+}
+
+async function fetchShopAnnouncements(api: ReturnType<typeof useApi>, shopId: string) {
+  if (shopAnnouncementsCache.has(shopId)) {
+    return shopAnnouncementsCache.get(shopId)!;
+  }
+
+  if (shopAnnouncementsPromise.has(shopId)) {
+    return await shopAnnouncementsPromise.get(shopId)!;
+  }
+
+  const promise = api.announcements.list({ shop_display_id: shopId });
+  shopAnnouncementsPromise.set(shopId, promise);
+
+  try {
+    const rows = await promise;
+    shopAnnouncementsCache.set(shopId, rows);
+    return rows;
+  } finally {
+    shopAnnouncementsPromise.delete(shopId);
+  }
+}
+
+async function fetchFilterAttributes(api: ReturnType<typeof useApi>) {
+  if (filterAttributesCache) {
+    return filterAttributesCache;
+  }
+
+  if (filterAttributesPromise) {
+    return await filterAttributesPromise;
+  }
+
+  const promise = api.products.getFilterAttributes();
+  filterAttributesPromise = promise;
+
+  try {
+    const attrs = await promise;
+    filterAttributesCache = attrs;
+    return attrs;
+  } finally {
+    filterAttributesPromise = null;
+  }
+}
+
 export default function ShopDetailsPage({ shop, products, scope, actionsSidebar }: ShopDetailsPageProps) {
   const [displayProducts, setDisplayProducts] = useState<ProductListItem[]>(products);
   const [currentPage, setCurrentPage] = useState(1);
@@ -129,7 +253,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     [filters]
   );
 
-  const shouldUseServerProducts = isManagedScope && activeTab === "products";
+  const shouldUseServerProducts = activeTab === "products";
 
   useEffect(() => {
     if (!shouldUseServerProducts) return;
@@ -157,6 +281,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
             ...baseParams,
             mode: actionCollectionQuery.mode,
             source_shop_display_id: actionCollectionQuery.mode !== "view" ? shop.display_id : undefined,
+            track_view: actionCollectionQuery.mode === "view",
           });
         } else if (selectedCollectionKey) {
           const [source, collectionIdValue] = selectedCollectionKey.split(":");
@@ -165,6 +290,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
             ...baseParams,
             mode: "view",
             shop_display_id: source === "system" ? shop.display_id : undefined,
+            track_view: true,
           });
         } else {
           pageData = await api.products.getProductsPage({
@@ -235,55 +361,11 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
 
 
   useEffect(() => {
-    let mounted = true;
-
-    const hydrateMissingAttributes = async () => {
-      const productsMissingAttributes = products
-        .filter((product) => !product.attributes || product.attributes.length === 0)
-        .map((product) => product.display_id);
-
-      if (productsMissingAttributes.length === 0) {
-        if (mounted) setDisplayProducts(products);
-        return;
-      }
-
-      const detailRows = await Promise.all(
-        productsMissingAttributes.map(async (displayId) => {
-          try {
-            const detailResponse = await api.products.getProductDetails(displayId, { authenticated: false });
-            return {
-              display_id: displayId,
-              attributes: (detailResponse.product.attributes || []).map((attr) => ({
-                definition_id: attr.definition_id,
-                option_id: attr.option_id,
-                option_value: attr.value,
-              })),
-            };
-          } catch {
-            return { display_id: displayId, attributes: [] as Array<{ definition_id: number; option_id: number; option_value?: string }> };
-          }
-        })
-      );
-
-      const attrsByProductId = new Map(detailRows.map((row) => [row.display_id, row.attributes]));
-      const hydratedProducts = products.map((product) => {
-        const hydratedAttrs = attrsByProductId.get(product.display_id);
-        if (!hydratedAttrs) return product;
-        return {
-          ...product,
-          attributes: hydratedAttrs,
-        };
-      });
-
-      if (mounted) setDisplayProducts(hydratedProducts);
-    };
-
-    hydrateMissingAttributes();
-
+    setDisplayProducts(products);
     return () => {
-      mounted = false;
+      // no cleanup required
     };
-  }, [api, products]);
+  }, [products]);
 
   useEffect(() => {
     let mounted = true;
@@ -291,62 +373,17 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     const loadCollectionsAndMembers = async () => {
       setLoadingCollections(true);
       try {
-        const shopCollectionRows = await api.collections.list({
-          kind: "shop",
-          shop_display_id: shop.display_id,
-          authenticated: isManagedScope,
-        });
-
-        const systemCollectionRows = await api.collections.list({
-          kind: "system",
-          authenticated: isManagedScope,
-        });
-
-        if (!mounted) return;
-        const normalizedShopCollections: ShopCollectionItem[] = ((shopCollectionRows || []) as Array<Omit<ShopCollectionItem, "source">>)
-          .map((item) => ({ ...item, source: "shop" as const }));
-        const normalizedSystemCollections: ShopCollectionItem[] = ((systemCollectionRows || []) as Array<Omit<ShopCollectionItem, "source">>)
-          .map((item) => ({ ...item, source: "system" as const }));
-
-        const memberEntries = await Promise.all(
-          [...normalizedShopCollections, ...normalizedSystemCollections].map(async (collectionItem) => {
-            const collectionKey = `${collectionItem.source}:${collectionItem.id}`;
-            try {
-              // Use getProductsPage with a larger page_size to ensure we get all products for ribbon display
-              const pageData = await api.collections.getProductsPage(collectionItem.id, {
-                authenticated: isManagedScope,
-                page: 1,
-                page_size: 100,
-                shop_display_id: collectionItem.source === "system" ? shop.display_id : undefined,
-              });
-              const items = (pageData?.items || []) as ProductListItem[];
-              const normalizedItems = items.map((it) => ({
-                ...it,
-                id: `${collectionItem.source}-${collectionItem.id}-${it.display_id}`,
-              } as CollectionMemberItem));
-
-              return [collectionItem, collectionKey, normalizedItems] as const;
-            } catch (err) {
-              console.warn(`[ShopDetailsPage] Failed to load collection ${collectionItem.id} products:`, err);
-              return [collectionItem, collectionKey, [] as CollectionMemberItem[]] as const;
-            }
-          })
+        const { collections: validCollections, collectionMembers: memberMap } = await fetchShopCollections(
+          api,
+          shop.display_id,
+          isManagedScope
         );
 
         if (!mounted) return;
-        const memberMap: Record<string, CollectionMemberItem[]> = {};
-        const validCollections: ShopCollectionItem[] = [];
-
-        memberEntries.forEach(([collectionItem, key, items]) => {
-          memberMap[key] = items;
-          if (collectionItem.source === "shop" || items.length > 0) {
-            validCollections.push(collectionItem);
-          }
-        });
-
         setCollections(validCollections);
         setCollectionMembers(memberMap);
-      } catch {
+      } catch (err) {
+        console.warn("[ShopDetailsPage] Failed to load shop collections:", err);
         if (!mounted) return;
         setCollections([]);
         setCollectionMembers({});
@@ -360,16 +397,17 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     return () => {
       mounted = false;
     };
-  }, [api, shop.display_id, isManagedScope, products]);
+  }, [api, shop.display_id, isManagedScope]);
 
   useEffect(() => {
     let mounted = true;
 
     const loadAnnouncements = async () => {
       try {
-        const rows = await api.announcements.list({ shop_display_id: shop.display_id });
+        const rows = await fetchShopAnnouncements(api, shop.display_id);
         if (mounted) setShopAnnouncements(rows || []);
-      } catch {
+      } catch (err) {
+        console.warn("[ShopDetailsPage] Failed to load announcements:", err);
         if (mounted) setShopAnnouncements([]);
       }
     };
@@ -386,9 +424,10 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
 
     const loadFilterAttributes = async () => {
       try {
-        const attrs = await api.products.getFilterAttributes();
+        const attrs = await fetchFilterAttributes(api);
         if (mounted) setFilterAttributes(attrs);
-      } catch {
+      } catch (err) {
+        console.warn("[ShopDetailsPage] Failed to load filter attributes:", err);
         if (mounted) setFilterAttributes([]);
       }
     };

@@ -108,7 +108,7 @@ export type ProductListItem = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  attributes?: { definition_id: number; option_id: number; option_value?: string }[]; // optional attribute summary added to product list
+  attributes: { definition_id: number; option_id: number; option_value?: string }[]; // attribute summary always returned for product list
 };
 
 export type ProductFilterAttribute = {
@@ -152,6 +152,7 @@ export type ProductListQueryParams = {
   page_size?: number;
   search?: string;
   shop_display_id?: string;
+  track_shop_view?: boolean;
   min_price?: number;
   max_price?: number;
   sort_by?: "newest" | "price-low" | "price-high";
@@ -173,6 +174,7 @@ export type CollectionProductsQueryParams = {
   source_collection_id?: number;
   source_shop_display_id?: string;
   shop_display_id?: string;
+  track_view?: boolean;
 };
 
 export type ProductAttributeItem = {
@@ -349,6 +351,7 @@ export type AnnouncementUpsertRequest = {
   text_color?: string;
   is_active?: boolean;
   shop_display_id?: string;
+  track_shop_view?: boolean;
 };
 
 export type Attribute = {

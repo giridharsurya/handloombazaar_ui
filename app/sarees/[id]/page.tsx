@@ -7,6 +7,8 @@ import { useApi } from "@/lib/ApiProvider";
 import { useAuth } from "@/lib/AuthContext";
 import type { Product } from "@/types";
 
+const pendingProductDetailsFetches = new Map<string, Promise<Product>>();
+
 export default function SareeDetailsPage() {
   const { id } = useParams() as { id?: string };
   const api = useApi();
@@ -27,17 +29,31 @@ export default function SareeDetailsPage() {
       setError("");
 
       try {
-        const response = await api.products.getProductDetails(id, {
-          authenticated: !!auth,
-        });
+        let responsePromise: Promise<Product>;
+
+        if (pendingProductDetailsFetches.has(id)) {
+          responsePromise = pendingProductDetailsFetches.get(id)!;
+        } else {
+          responsePromise = api.products
+            .getProductDetails(id, {
+              authenticated: !!auth,
+            })
+            .then((response) => response.product as Product);
+          pendingProductDetailsFetches.set(id, responsePromise);
+        }
+
+        const fetchedProduct = await responsePromise;
         if (cancelled) return;
-        const fetchedProduct = response.product as Product;
+
         setProduct(fetchedProduct);
         setShop(fetchedProduct.shop ?? null);
       } catch (err: any) {
         if (cancelled) return;
         setError(err?.message || "Product not found");
       } finally {
+        if (pendingProductDetailsFetches.get(id)) {
+          pendingProductDetailsFetches.delete(id);
+        }
         if (!cancelled) setLoading(false);
       }
     };
@@ -47,7 +63,7 @@ export default function SareeDetailsPage() {
     return () => {
       cancelled = true;
     };
-  }, [id, auth, isLoading, api]);
+  }, [id, isLoading, api]);
 
   if (loading) {
     return <div className="px-4 py-8 text-sm text-slate-600">Loading product...</div>;

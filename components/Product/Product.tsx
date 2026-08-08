@@ -69,6 +69,7 @@ export default function Product({ product, size = "default", hideShop = false, h
 
       <Link
         href={`/sarees/${product.display_id}`}
+        prefetch={false}
         aria-label={`View ${productName}`}
         className={`block bg-white dark:bg-gray-900 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-rose-500 ${
           isMainProduct

@@ -33,6 +33,9 @@ import {
   AnnouncementUpsertRequest,
 } from "../types/apiTypes";
 
+const pendingProductPageRequests = new Map<string, Promise<ProductsResponseData>>();
+const pendingShopDetailRequests = new Map<string, Promise<ShopDetail>>();
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:8000";
 import { apiFetch } from "./apiClient";
 
@@ -118,7 +121,7 @@ export const api = {
     },
 
     async getProductsPage(params: ProductListQueryParams = {}): Promise<ProductsResponseData> {
-      const { authenticated, attribute_filters, attribute_option_ids, ...query } = params;
+      const { authenticated, attribute_filters, attribute_option_ids, track_shop_view, ...query } = params;
       const qs = new URLSearchParams();
       Object.entries(query).forEach(([k, v]) => {
         if (v !== undefined && v !== null) qs.append(k, String(v));
@@ -129,11 +132,28 @@ export const api = {
       if (attribute_option_ids && attribute_option_ids.length) {
         attribute_option_ids.forEach((id) => qs.append("attribute_option_ids", String(id)));
       }
+      if (track_shop_view) {
+        qs.append("track_shop_view", "true");
+      }
 
-      const res = await apiFetch(`/api/products?${qs.toString()}`, { requiresAuth: !!authenticated });
-      if (!res.ok) throw new Error(await parseError(res));
-      const productResponse: ProductsResponse = await res.json();
-      return productResponse.data;
+      const cacheKey = `/api/products?${qs.toString()}|auth=${!!authenticated}`;
+      if (pendingProductPageRequests.has(cacheKey)) {
+        return pendingProductPageRequests.get(cacheKey)!;
+      }
+
+      const requestPromise = (async () => {
+        try {
+          const res = await apiFetch(`/api/products?${qs.toString()}`, { requiresAuth: !!authenticated });
+          if (!res.ok) throw new Error(await parseError(res));
+          const productResponse: ProductsResponse = await res.json();
+          return productResponse.data;
+        } finally {
+          pendingProductPageRequests.delete(cacheKey);
+        }
+      })();
+
+      pendingProductPageRequests.set(cacheKey, requestPromise);
+      return requestPromise;
     },
 
     async getProducts(params: ProductListQueryParams = {}): Promise<ProductListItem[]> {
@@ -214,9 +234,23 @@ export const api = {
       return res.json();
     },
     async getDetail(request: GetShopDetailRequest): Promise<ShopDetail> {
-      const res = await apiFetch(`/api/shops/${encodeURIComponent(request.display_id)}`, { requiresAuth: false });
-      if (!res.ok) throw new Error(await parseError(res));
-      return res.json();
+      const cacheKey = `/api/shops/${encodeURIComponent(request.display_id)}`;
+      if (pendingShopDetailRequests.has(cacheKey)) {
+        return pendingShopDetailRequests.get(cacheKey)!;
+      }
+
+      const requestPromise = (async () => {
+        try {
+          const res = await apiFetch(cacheKey, { requiresAuth: false });
+          if (!res.ok) throw new Error(await parseError(res));
+          return res.json();
+        } finally {
+          pendingShopDetailRequests.delete(cacheKey);
+        }
+      })();
+
+      pendingShopDetailRequests.set(cacheKey, requestPromise);
+      return requestPromise;
     },
     async list(): Promise<ListShopsResponse> {
       const res = await apiFetch(`/api/shops`, { requiresAuth: false });
@@ -396,13 +430,16 @@ export const api = {
     },
 
     async getProductsPage(collectionId: number, params: CollectionProductsQueryParams = {}): Promise<ProductsResponseData> {
-      const { authenticated, attribute_option_ids, ...query } = params;
+      const { authenticated, attribute_option_ids, track_view, ...query } = params;
       const qs = new URLSearchParams();
       Object.entries(query).forEach(([k, v]) => {
         if (v !== undefined && v !== null) qs.append(k, String(v));
       });
       if (attribute_option_ids && attribute_option_ids.length) {
         attribute_option_ids.forEach((id) => qs.append("attribute_option_ids", String(id)));
+      }
+      if (track_view) {
+        qs.append("track_view", "true");
       }
 
       const suffix = qs.toString();
