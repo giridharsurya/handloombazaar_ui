@@ -26,11 +26,13 @@ import {
   GetShopStatusRequest,
   ShopStatusResponse,
   ListShopsResponse,
+  PaginatedShopsResponse,
   GetShopDetailRequest,
   ShopDetail,
   ShopUpdatePayload,
   AnnouncementBanner,
   AnnouncementUpsertRequest,
+  PaginatedCollectionsResponse,
 } from "../types/apiTypes";
 
 const pendingProductPageRequests = new Map<string, Promise<ProductsResponseData>>();
@@ -252,8 +254,26 @@ export const api = {
       pendingShopDetailRequests.set(cacheKey, requestPromise);
       return requestPromise;
     },
-    async list(): Promise<ListShopsResponse> {
-      const res = await apiFetch(`/api/shops`, { requiresAuth: false });
+    async list(params: { sort_by?: "newest" | "most-viewed" | "product-count"; page?: number; page_size?: number; view_count?: boolean } = {}): Promise<ListShopsResponse> {
+      const qs = new URLSearchParams();
+      if (params.sort_by) qs.append("sort_by", params.sort_by);
+      if (params.page !== undefined) qs.append("page", String(params.page));
+      if (params.page_size !== undefined) qs.append("page_size", String(params.page_size));
+      if (params.view_count) qs.append("view_count", "true");
+      const path = qs.toString() ? `/api/shops?${qs.toString()}` : `/api/shops`;
+      const res = await apiFetch(path, { requiresAuth: false });
+      if (!res.ok) throw new Error(await parseError(res));
+      const data = await res.json();
+      return Array.isArray(data.items) ? data.items : data;
+    },
+    async listPage(params: { sort_by?: "newest" | "most-viewed" | "product-count"; page?: number; page_size?: number; view_count?: boolean } = {}): Promise<PaginatedShopsResponse> {
+      const qs = new URLSearchParams();
+      if (params.sort_by) qs.append("sort_by", params.sort_by);
+      if (params.page !== undefined) qs.append("page", String(params.page));
+      if (params.page_size !== undefined) qs.append("page_size", String(params.page_size));
+      if (params.view_count) qs.append("view_count", "true");
+      const path = qs.toString() ? `/api/shops?${qs.toString()}` : `/api/shops`;
+      const res = await apiFetch(path, { requiresAuth: false });
       if (!res.ok) throw new Error(await parseError(res));
       return res.json();
     },
@@ -406,16 +426,34 @@ export const api = {
     },
   },
   collections: {
-    async list(params: { kind?: "system" | "shop"; shop_display_id?: string; authenticated?: boolean } = {}) {
-      const { authenticated, shop_display_id, kind } = params;
+    async list(params: { kind?: "system" | "shop"; shop_display_id?: string; sort_by?: "newest" | "most-viewed" | "product-count"; page?: number; page_size?: number; view_count?: boolean; authenticated?: boolean } = {}): Promise<ListCollectionsResponse> {
+      const { authenticated, shop_display_id, kind, sort_by, page, page_size, view_count } = params;
       const qs = new URLSearchParams();
       if (kind) qs.append("kind", kind);
       if (shop_display_id) qs.append("shop_display_id", shop_display_id);
+      if (sort_by) qs.append("sort_by", sort_by);
+      if (page !== undefined) qs.append("page", String(page));
+      if (page_size !== undefined) qs.append("page_size", String(page_size));
+      if (view_count) qs.append("view_count", "true");
 
       const res = await apiFetch(`/api/collections?${qs.toString()}`, { requiresAuth: !!authenticated });
       if (!res.ok) throw new Error(await parseError(res));
       const data = await res.json();
       return Array.isArray(data.items) ? data.items : data;
+    },
+    async listPage(params: { kind?: "system" | "shop"; shop_display_id?: string; sort_by?: "newest" | "most-viewed" | "product-count"; page?: number; page_size?: number; view_count?: boolean; authenticated?: boolean } = {}): Promise<PaginatedCollectionsResponse> {
+      const { authenticated, shop_display_id, kind, sort_by, page, page_size, view_count } = params;
+      const qs = new URLSearchParams();
+      if (kind) qs.append("kind", kind);
+      if (shop_display_id) qs.append("shop_display_id", shop_display_id);
+      if (sort_by) qs.append("sort_by", sort_by);
+      if (page !== undefined) qs.append("page", String(page));
+      if (page_size !== undefined) qs.append("page_size", String(page_size));
+      if (view_count) qs.append("view_count", "true");
+
+      const res = await apiFetch(`/api/collections?${qs.toString()}`, { requiresAuth: !!authenticated });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
     },
     async getConstraints(collectionId: number) {
       const res = await apiFetch(`/api/collections/${collectionId}/constraints`, { requiresAuth: true });

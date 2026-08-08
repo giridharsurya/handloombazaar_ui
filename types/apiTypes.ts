@@ -108,6 +108,7 @@ export type ProductListItem = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
+  view_count?: number;
   attributes: { definition_id: number; option_id: number; option_value?: string }[]; // attribute summary always returned for product list
 };
 
@@ -147,6 +148,14 @@ export type ProductsResponse = {
   data: ProductsResponseData;
 };
 
+export type PaginatedListResponse<T> = {
+  items: T[];
+  page: number;
+  page_size: number;
+  total_count: number;
+  has_next: boolean;
+};
+
 export type ProductListQueryParams = {
   page?: number;
   page_size?: number;
@@ -155,7 +164,7 @@ export type ProductListQueryParams = {
   track_shop_view?: boolean;
   min_price?: number;
   max_price?: number;
-  sort_by?: "newest" | "price-low" | "price-high";
+  sort_by?: "newest" | "price-low" | "price-high" | "most-viewed";
   attribute_filters?: string[];
   attribute_option_ids?: number[];
   authenticated?: boolean;
@@ -167,7 +176,7 @@ export type CollectionProductsQueryParams = {
   search?: string;
   min_price?: number;
   max_price?: number;
-  sort_by?: "newest" | "price-low" | "price-high";
+  sort_by?: "newest" | "price-low" | "price-high" | "most-viewed";
   attribute_option_ids?: number[];
   mode?: "view" | "add" | "delete";
   authenticated?: boolean;
@@ -209,9 +218,12 @@ export type ShopStatusResponse = {
   shop_logo_url: string;
   approved: boolean;
   is_active: boolean;
+  view_count?: number;
+  product_count?: number;
 };
 
 export type ListShopsResponse = ShopStatusResponse[];
+export type PaginatedShopsResponse = PaginatedListResponse<ShopStatusResponse>;
 
 export type ShopDetail = ShopStatusResponse & {
   description: string | null;
@@ -323,9 +335,14 @@ export type Collection = {
   description: string | null;
   display_id: string;
   is_active: boolean;
+  view_count?: number;
+  product_count?: number;
   created_at: string;
   updated_at: string;
 };
+
+export type ListCollectionsResponse = Collection[];
+export type PaginatedCollectionsResponse = PaginatedListResponse<Collection>;
 
 export type AnnouncementBanner = {
   id: number;

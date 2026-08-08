@@ -19,7 +19,7 @@ export default function SareesPage() {
     priceRange: [0, 25000],
     selectedAttributeOptionIds: {},
   });
-  const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest">("newest");
+  const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest" | "most-viewed">("newest");
 
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);

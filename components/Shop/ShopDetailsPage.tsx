@@ -41,8 +41,8 @@ const shopAnnouncementsPromise = new Map<string, Promise<AnnouncementBanner[]>>(
 let filterAttributesCache: ProductFilterAttribute[] | null = null;
 let filterAttributesPromise: Promise<ProductFilterAttribute[]> | null = null;
 
-async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: string, isManagedScope: boolean) {
-  const cacheKey = `${shopId}:${isManagedScope ? "managed" : "public"}`;
+async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: string, isManagedScope: boolean, sortBy: "newest" | "most-viewed") {
+  const cacheKey = `${shopId}:${isManagedScope ? "managed" : "public"}:${sortBy}`;
 
   if (shopCollectionsCache.has(cacheKey)) {
     return shopCollectionsCache.get(cacheKey)!;
@@ -57,11 +57,15 @@ async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: stri
       kind: "shop",
       shop_display_id: shopId,
       authenticated: isManagedScope,
+      sort_by: sortBy,
+      view_count: true,
     });
 
     const systemCollectionRows = await api.collections.list({
       kind: "system",
       authenticated: isManagedScope,
+      sort_by: sortBy,
+      view_count: true,
     });
 
     const normalizedShopCollections: ShopCollectionItem[] = ((shopCollectionRows || []) as Array<Omit<ShopCollectionItem, "source">>)
@@ -168,7 +172,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     priceRange: [0, 25000],
     selectedAttributeOptionIds: {},
   });
-  const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest">("newest");
+  const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest" | "most-viewed">("newest");
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
@@ -354,6 +358,19 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     setCurrentPage(1);
   }, [filters, sortBy, selectedCollectionKey, actionCollectionQuery]);
 
+  // Clear selected collection filter, sort, and filters whenever switching away from the products tab.
+  useEffect(() => {
+    if (activeTab !== "products") {
+      setSelectedCollectionKey(null);
+      setSortBy("newest");
+      setFilters({
+        priceRange: [0, 25000],
+        selectedAttributeOptionIds: {},
+      });
+      setShowFilters(true);
+    }
+  }, [activeTab]);
+
   const paginationOffset = (currentPage - 1) * itemsPerPage;
   const paginatedProducts = shouldUseServerProducts
     ? visibleProducts
@@ -376,7 +393,8 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
         const { collections: validCollections, collectionMembers: memberMap } = await fetchShopCollections(
           api,
           shop.display_id,
-          isManagedScope
+          isManagedScope,
+          sortBy
         );
 
         if (!mounted) return;
@@ -397,7 +415,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     return () => {
       mounted = false;
     };
-  }, [api, shop.display_id, isManagedScope]);
+  }, [api, shop.display_id, isManagedScope, sortBy]);
 
   useEffect(() => {
     let mounted = true;
@@ -729,7 +747,18 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
       {activeTab === "collections" ? (
         <section className="px-4 pb-8">
           <div className="mx-auto">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Collections</h2>
+            <FilterHeader
+              pageTitle="Collections"
+              productCount={collectionRibbonRows.length}
+              showFiltersToggle={false}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              sortOptions={[
+                { value: "newest", label: "Newest" },
+                { value: "most-viewed", label: "Most Viewed" },
+              ]}
+              isSticky={false}
+            />
             {loadingCollections ? <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">Loading collections...</p> : null}
             {!loadingCollections && collectionRibbonRows.length === 0 ? (
               <p className="mt-3 text-sm text-gray-600 dark:text-gray-300">No collections available for this shop.</p>

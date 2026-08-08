@@ -22,7 +22,7 @@ export default function AttributeConstraintEditor({ value, onChange, showAllowed
   React.useEffect(() => {
     (async () => {
       try {
-        const attrs = await api.admin.getAttributes();
+        const attrs = await api.products.getEditableAttributes({ authenticated: false });
         setAttributes(attrs || []);
       } catch (e) {
         setAttributes([]);

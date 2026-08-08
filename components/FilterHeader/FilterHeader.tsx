@@ -2,7 +2,12 @@
 
 import React, { useEffect, useRef, useState } from "react";
 
-type SortOption = "price-low" | "price-high" | "newest";
+type SortOption = "price-low" | "price-high" | "newest" | "most-viewed" | "product-count";
+
+type SortOptionItem = {
+  value: SortOption;
+  label: string;
+};
 
 type FilterHeaderProps = {
   pageTitle: string;
@@ -12,6 +17,7 @@ type FilterHeaderProps = {
   filtersOpen?: boolean;
   sortBy?: SortOption;
   onSortChange?: (sort: SortOption) => void;
+  sortOptions?: SortOptionItem[];
   isSticky?: boolean;
 };
 
@@ -23,6 +29,7 @@ export default function FilterHeader({
   filtersOpen = true,
   sortBy: sortByProp,
   onSortChange,
+  sortOptions,
   isSticky = true,
 }: FilterHeaderProps) {
   const [sortBy, setSortBy] = useState<SortOption>("newest");
@@ -62,6 +69,14 @@ export default function FilterHeader({
     setSortBy(newSort);
     onSortChange?.(newSort);
   };
+
+  const availableSortOptions: SortOptionItem[] =
+    sortOptions ?? [
+      { value: "price-low", label: "Price: Low to High" },
+      { value: "price-high", label: "Price: High to Low" },
+      { value: "newest", label: "Newest" },
+      { value: "most-viewed", label: "Most Viewed" },
+    ];
 
   return (
     <div
@@ -112,9 +127,11 @@ export default function FilterHeader({
               onChange={handleSortChange}
               className="px-2.5 py-1.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-rose-500"
             >
-              <option value="price-low">Price: Low to High</option>
-              <option value="price-high">Price: High to Low</option>
-              <option value="newest">Newest</option>
+              {availableSortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
             </select>
           </div>
         </div>

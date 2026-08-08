@@ -6,6 +6,7 @@ import api from "@/lib/api";
 import ShopProductsRibbon from "@/components/Ribbon/ShopProductsRibbon";
 import ShopsFilter, { FilterState } from "@/components/Filters/ShopsFilter";
 import FilterHeader from "@/components/FilterHeader/FilterHeader";
+import Pagination from "@/components/Product/Pagination";
 import type { ShopStatusResponse } from "@/types/apiTypes";
 
 export default function ShopsPage() {
@@ -13,12 +14,23 @@ export default function ShopsPage() {
     priceRange: [0, 100000],
     selectedTypes: [],
   });
+  const [sortBy, setSortBy] = useState<"newest" | "most-viewed" | "product-count">("newest");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 8;
+
+  const handleSortChange = (sort: "price-low" | "price-high" | "newest" | "most-viewed" | "product-count") => {
+    if (sort === "newest" || sort === "most-viewed" || sort === "product-count") {
+      setSortBy(sort);
+      setCurrentPage(1);
+    }
+  };
 
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
 
   const [shops, setShops] = useState<ShopStatusResponse[]>([]);
+  const [totalShops, setTotalShops] = useState(0);
   const [loading, setLoading] = useState(true);
   const [productsMap, setProductsMap] = useState<Record<string, any[]>>({});
 
@@ -57,13 +69,17 @@ export default function ShopsPage() {
     let mounted = true;
     const load = async () => {
       setLoading(true);
+      setProductsMap({});
       try {
-        const data = await api.shops.list();
+        const data = await api.shops.listPage({ sort_by: sortBy, view_count: true, page: currentPage, page_size: itemsPerPage });
         if (!mounted) return;
-        setShops(Array.isArray(data) ? data : []);
+        setShops(data.items || []);
+        setTotalShops(data.total_count || 0);
       } catch (e) {
-        // keep shops empty on error
         console.error("Failed to load shops", e);
+        if (!mounted) return;
+        setShops([]);
+        setTotalShops(0);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -72,7 +88,7 @@ export default function ShopsPage() {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [sortBy, currentPage]);
 
   // When shops load, fetch a small set of products for each shop to display in the section
   React.useEffect(() => {
@@ -120,11 +136,18 @@ export default function ShopsPage() {
       <section>
         <FilterHeader
           pageTitle="Shops"
-          productCount={filteredShops.length}
+          productCount={totalShops}
           showFiltersToggle={true}
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
+          sortBy={sortBy}
+          onSortChange={handleSortChange}
           isSticky={isHeaderSticky}
+          sortOptions={[
+            { value: "newest", label: "Newest" },
+            { value: "most-viewed", label: "Most Viewed" },
+            { value: "product-count", label: "Most Products" },
+          ]}
         />
 
         <div className="px-4 py-4">
@@ -157,6 +180,7 @@ export default function ShopsPage() {
                   ))}
                 </div>
               )}
+              <Pagination currentPage={currentPage} totalItems={totalShops} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
             </section>
           </div>
         </div>
