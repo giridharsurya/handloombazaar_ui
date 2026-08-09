@@ -232,6 +232,22 @@ export default function ShopDashboard() {
               </>
             )}
           </div>
+
+          <div className={`${cardBaseClass} ${isApproved ? cardEnabledClass : cardDisabledClass}`}>
+            {isApproved ? (
+              <Link href="/vendor/announcements" className="block">
+                <h2 className="text-xl font-semibold text-slate-900">Manage Banners</h2>
+                <p className="mt-2 text-sm text-slate-600">Create and reorder announcement banners for your shop.</p>
+                <p className="mt-4 text-sm font-semibold text-slate-900">Manage Banners →</p>
+              </Link>
+            ) : (
+              <>
+                <h2 className="text-xl font-semibold text-slate-900">Manage Banners</h2>
+                <p className="mt-2 text-sm text-slate-600">Create and reorder announcement banners for your shop.</p>
+                <p className="mt-4 text-sm text-slate-500">Available after approval</p>
+              </>
+            )}
+          </div>
         </section>
       </div>
     </main>

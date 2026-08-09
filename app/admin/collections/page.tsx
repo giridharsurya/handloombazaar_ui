@@ -55,13 +55,40 @@ export default function AdminCollectionsPage() {
     setFeedback("");
     setIsLoadingCollections(true);
     try {
-      const kind = collectionScope === "system" ? "system" : "shop";
-      const cols = await api.collections.list({
-        authenticated: true,
-        kind,
-        shop_display_id: collectionScope === "vendor" ? selectedShopDisplayId || undefined : undefined,
-      });
-      setCollections(cols || []);
+      if (collectionScope === "vendor") {
+        if (!selectedShopDisplayId) {
+          setCollections([]);
+          return;
+        }
+
+        const [shopCols, systemCols] = await Promise.all([
+          api.collections.list({ authenticated: true, kind: "shop", shop_display_id: selectedShopDisplayId }),
+          api.collections.list({ authenticated: true, kind: "system", shop_display_id: selectedShopDisplayId }),
+        ]);
+
+        const combined = [
+          ...(Array.isArray(shopCols) ? shopCols.map((item) => ({ ...item, source: "shop" as const })) : []),
+          ...(Array.isArray(systemCols) ? systemCols.map((item) => ({ ...item, source: "system" as const })) : []),
+        ];
+
+        combined.sort((a, b) => {
+          const aOrder = Number(a.homepage_order || 0);
+          const bOrder = Number(b.homepage_order || 0);
+          if (bOrder !== aOrder) return bOrder - aOrder;
+          const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return bDate - aDate || b.id - a.id;
+        });
+
+        setCollections(combined);
+      } else {
+        const cols = await api.collections.list({
+          authenticated: true,
+          kind: collectionScope === "system" ? "system" : "shop",
+          shop_display_id: collectionScope === "vendor" ? selectedShopDisplayId || undefined : undefined,
+        });
+        setCollections(cols || []);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to load collections";
       setFeedback(message);
@@ -69,6 +96,7 @@ export default function AdminCollectionsPage() {
       setIsLoadingCollections(false);
     }
   };
+
 
   useEffect(() => {
     if (isLoading || !auth || auth.role !== "admin") return;
@@ -79,6 +107,30 @@ export default function AdminCollectionsPage() {
     if (isLoading || !auth || auth.role !== "admin") return;
     loadCollections();
   }, [isLoading, auth, collectionScope, selectedShopDisplayId]);
+
+  const handleToggleHomepageDisplay = async (collectionId: number, displayOnHomepage: boolean) => {
+    setFeedback("");
+    try {
+      await api.collections.toggleHomepageDisplay(collectionId, displayOnHomepage, collectionScope === "vendor" ? selectedShopDisplayId ?? undefined : undefined);
+      await loadCollections();
+      setFeedback("Homepage collection settings updated.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update homepage display";
+      setFeedback(message);
+    }
+  };
+
+  const handleOrderHomepageCollections = async (collectionIds: number[]) => {
+    setFeedback("");
+    try {
+      await api.collections.orderHomepageCollections(collectionIds, collectionScope === "vendor" ? selectedShopDisplayId ?? undefined : undefined);
+      await loadCollections();
+      setFeedback("Homepage collection order updated.");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to update homepage order";
+      setFeedback(message);
+    }
+  };
 
   if (isLoading) return null;
   if (!auth || auth.role !== "admin") return null;
@@ -150,6 +202,9 @@ export default function AdminCollectionsPage() {
                 onDeleted={async () => {
                   await loadCollections();
                 }}
+                showHomepageControls={collectionScope === "system" || collectionScope === "vendor"}
+                onToggleHomepageDisplay={handleToggleHomepageDisplay}
+                onOrderHomepageCollections={handleOrderHomepageCollections}
               />
             </div>
           </div>

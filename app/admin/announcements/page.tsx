@@ -88,9 +88,17 @@ export default function AdminAnnouncementsPage() {
     };
   }, [api, auth, scope, selectedShopDisplayId]);
 
-  const loadAnnouncements = async () => {
+  const loadAnnouncements = async (shopDisplayId?: string) => {
     try {
-      const rows = await api.announcements.list({ include_inactive: true });
+      const params: { shop_display_id?: string; include_inactive?: boolean; include_hidden?: boolean } = {
+        include_inactive: true,
+      };
+      if (scope === "shop" && shopDisplayId) {
+        params.shop_display_id = shopDisplayId;
+        params.include_hidden = true;
+      }
+
+      const rows = await api.announcements.list(params);
       setAnnouncements(rows || []);
     } catch {
       setAnnouncements([]);
@@ -99,8 +107,12 @@ export default function AdminAnnouncementsPage() {
 
   useEffect(() => {
     if (!auth || auth.role !== "admin") return;
-    loadAnnouncements();
-  }, [auth]);
+    if (scope === "shop" && !selectedShopDisplayId) {
+      setAnnouncements([]);
+      return;
+    }
+    loadAnnouncements(scope === "shop" ? selectedShopDisplayId : undefined);
+  }, [auth, scope, selectedShopDisplayId]);
 
   const filteredAnnouncements = useMemo(() => {
     if (scope === "system") {
@@ -108,14 +120,47 @@ export default function AdminAnnouncementsPage() {
     }
 
     if (!selectedShopDisplayId) {
-      return announcements.filter((a) => a.banner_scope === "shop");
+      return [];
     }
 
-    const selectedShop = shops.find((s) => s.display_id === selectedShopDisplayId);
-    if (!selectedShop) return [];
+    return announcements;
+  }, [announcements, scope, selectedShopDisplayId]);
 
-    return announcements.filter((a) => a.banner_scope === "shop" && a.shop_id === selectedShop.id);
-  }, [announcements, scope, selectedShopDisplayId, shops]);
+  const canReorder = scope === "system" || (scope === "shop" && Boolean(selectedShopDisplayId));
+  const orderShopDisplayId = scope === "shop" ? selectedShopDisplayId || undefined : undefined;
+
+  const onReorder = async (index: number, direction: -1 | 1) => {
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= filteredAnnouncements.length) return;
+
+    const updated = [...filteredAnnouncements];
+    [updated[index], updated[nextIndex]] = [updated[nextIndex], updated[index]];
+    setAnnouncements((prev) => {
+      const copy = [...prev];
+      const a = updated[index];
+      const b = updated[nextIndex];
+      const idxA = copy.findIndex((item) => item.id === a.id);
+      const idxB = copy.findIndex((item) => item.id === b.id);
+      if (idxA !== -1 && idxB !== -1) {
+        [copy[idxA], copy[idxB]] = [copy[idxB], copy[idxA]];
+      }
+      return copy;
+    });
+
+    setSaving(true);
+    setMessage("");
+    try {
+      await api.announcements.order({
+        banner_ids: updated.map((item) => item.id),
+        shop_display_id: orderShopDisplayId,
+      });
+      setMessage("Banner order updated.");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Failed to update banner order");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const selectedCollectionName = useMemo(() => {
     if (!selectedCollectionId) return "";
@@ -186,7 +231,7 @@ export default function AdminAnnouncementsPage() {
         shop_display_id: scope === "shop" ? selectedShopDisplayId || undefined : undefined,
       });
       setMessage("Banner saved.");
-      await loadAnnouncements();
+      await loadAnnouncements(scope === "shop" ? selectedShopDisplayId : undefined);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Failed to save banner");
     } finally {
@@ -207,7 +252,7 @@ export default function AdminAnnouncementsPage() {
         shop_display_id: scope === "shop" ? selectedShopDisplayId || undefined : undefined,
       });
       setMessage("Banner removed.");
-      await loadAnnouncements();
+      await loadAnnouncements(scope === "shop" ? selectedShopDisplayId : undefined);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Failed to remove banner");
     } finally {
@@ -219,24 +264,33 @@ export default function AdminAnnouncementsPage() {
     setSaving(true);
     setMessage("");
     try {
-      const shopDisplayId = item.banner_scope === "shop" && item.shop_id
-        ? shops.find((s) => s.id === item.shop_id)?.display_id
-        : undefined;
+      if (scope === "shop" && item.banner_scope === "system") {
+        const orderedIds = filteredAnnouncements.map((banner) => banner.id);
+        await api.announcements.order({
+          banner_ids: orderedIds,
+          shop_display_id: selectedShopDisplayId || undefined,
+          visibility: { [item.id]: !item.is_visible_in_shop },
+        });
+      } else {
+        const shopDisplayId = item.banner_scope === "shop" && item.shop_id
+          ? shops.find((s) => s.id === item.shop_id)?.display_id
+          : undefined;
 
-      if (item.banner_scope === "shop" && !shopDisplayId) {
-        throw new Error("Unable to resolve target shop for this banner");
+        if (item.banner_scope === "shop" && !shopDisplayId) {
+          throw new Error("Unable to resolve target shop for this banner");
+        }
+
+        await api.announcements.upsert({
+          collection_id: item.collection_id,
+          title: item.title,
+          subtitle: item.subtitle || undefined,
+          background_color: item.background_color,
+          text_color: item.text_color,
+          is_active: !item.is_active,
+          shop_display_id: shopDisplayId,
+        });
       }
-
-      await api.announcements.upsert({
-        collection_id: item.collection_id,
-        title: item.title,
-        subtitle: item.subtitle || undefined,
-        background_color: item.background_color,
-        text_color: item.text_color,
-        is_active: !item.is_active,
-        shop_display_id: shopDisplayId,
-      });
-      await loadAnnouncements();
+      await loadAnnouncements(scope === "shop" ? selectedShopDisplayId : undefined);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Failed to update banner status");
     } finally {
@@ -351,52 +405,103 @@ export default function AdminAnnouncementsPage() {
             <div className="rounded border border-slate-200 p-4">
               <h2 className="mb-3 text-sm font-semibold">Existing Banners</h2>
               <div className="space-y-3">
-                {filteredAnnouncements.map((item) => (
-                  <div key={item.id} className="rounded border border-slate-200 p-3">
-                    <div className="flex items-center justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold">{item.title}</p>
-                        <p className="text-xs text-slate-500">{item.collection_name} • {item.banner_scope}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          className="rounded bg-slate-200 px-2 py-1 text-xs"
-                          onClick={() => onToggleActive(item)}
-                          disabled={saving}
-                        >
-                          {item.is_active ? "Set Inactive" : "Set Active"}
-                        </button>
-                        <button
-                          className="rounded bg-rose-100 px-2 py-1 text-xs text-rose-700"
-                          onClick={async () => {
-                            setSaving(true);
-                            try {
-                              const shopDisplayId = item.banner_scope === "shop" && item.shop_id
-                                ? shops.find((s) => s.id === item.shop_id)?.display_id
-                                : undefined;
+                {filteredAnnouncements.map((item) => {
+                  const isShopScopeSystemBanner = scope === "shop" && item.banner_scope === "system";
+                  const isVisibleInShop = item.is_visible_in_shop !== false;
+                  return (
+                    <div key={item.id} className="rounded border border-slate-200 p-3">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold">{item.title}</p>
+                          <p className="text-xs text-slate-500">{item.collection_name} • {item.banner_scope}</p>
+                          <p className="mt-1 text-xs text-slate-500">
+                            {isShopScopeSystemBanner
+                              ? isVisibleInShop
+                                ? "Visible in this shop"
+                                : "Hidden in this shop"
+                              : item.is_active
+                                ? "Active"
+                                : "Inactive"}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            className="rounded bg-slate-200 px-2 py-1 text-xs"
+                            onClick={() => onToggleActive(item)}
+                            disabled={saving}
+                          >
+                            {isShopScopeSystemBanner
+                              ? isVisibleInShop
+                                ? "Hide from shop"
+                                : "Show in shop"
+                              : item.is_active
+                                ? "Set Inactive"
+                                : "Set Active"}
+                          </button>
+                          {item.banner_scope === "shop" ? (
+                            <button
+                              className="rounded bg-slate-200 px-2 py-1 text-xs"
+                              onClick={() => {
+                                const shopDisplayId = shops.find((s) => s.id === item.shop_id)?.display_id;
+                                if (shopDisplayId) {
+                                  setScope("shop");
+                                  setSelectedShopDisplayId(shopDisplayId);
+                                }
+                                setSelectedCollectionId(item.collection_id);
+                              }}
+                              disabled={saving}
+                            >
+                              Edit
+                            </button>
+                          ) : null}
+                          <button
+                            className="rounded bg-slate-200 px-2 py-1 text-xs"
+                            onClick={() => onReorder(filteredAnnouncements.findIndex((a) => a.id === item.id), -1)}
+                            disabled={saving || !canReorder}
+                          >
+                            ▲
+                          </button>
+                          <button
+                            className="rounded bg-slate-200 px-2 py-1 text-xs"
+                            onClick={() => onReorder(filteredAnnouncements.findIndex((a) => a.id === item.id), 1)}
+                            disabled={saving || !canReorder}
+                          >
+                            ▼
+                          </button>
+                          {item.banner_scope !== "system" ? (
+                            <button
+                              className="rounded bg-rose-100 px-2 py-1 text-xs text-rose-700"
+                              onClick={async () => {
+                                setSaving(true);
+                                try {
+                                  const shopDisplayId = item.banner_scope === "shop" && item.shop_id
+                                    ? shops.find((s) => s.id === item.shop_id)?.display_id
+                                    : undefined;
 
-                              if (item.banner_scope === "shop" && !shopDisplayId) {
-                                throw new Error("Unable to resolve target shop for this banner");
-                              }
+                                  if (item.banner_scope === "shop" && !shopDisplayId) {
+                                    throw new Error("Unable to resolve target shop for this banner");
+                                  }
 
-                              await api.announcements.deleteByCollection(item.collection_id, {
-                                shop_display_id: shopDisplayId,
-                              });
-                              await loadAnnouncements();
-                            } catch (error) {
-                              setMessage(error instanceof Error ? error.message : "Failed to delete banner");
-                            } finally {
-                              setSaving(false);
-                            }
-                          }}
-                          disabled={saving}
-                        >
-                          Delete
-                        </button>
+                                  await api.announcements.deleteByCollection(item.collection_id, {
+                                    shop_display_id: shopDisplayId,
+                                  });
+                                  await loadAnnouncements(scope === "shop" ? selectedShopDisplayId : undefined);
+                                } catch (error) {
+                                  setMessage(error instanceof Error ? error.message : "Failed to delete banner");
+                                } finally {
+                                  setSaving(false);
+                                }
+                              }}
+                              disabled={saving}
+                            >
+                              Delete
+                            </button>
+                          ) : null}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 {filteredAnnouncements.length === 0 ? (
                   <p className="text-sm text-slate-500">No banners for selected scope.</p>
                 ) : null}

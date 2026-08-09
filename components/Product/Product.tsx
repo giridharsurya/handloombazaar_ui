@@ -40,6 +40,9 @@ export default function Product({ product, size = "default", hideShop = false, h
   const stockQuantity = hasStockQuantity ? Number(rawStockQuantity) : null;
   const isOutOfStock = hasStockQuantity && (stockQuantity ?? 0) <= 0;
   const isInactive = (product as any).is_active === false;
+  const rawViewCount = (product as any).view_count;
+  const viewCount = rawViewCount !== null && rawViewCount !== undefined && Number.isFinite(Number(rawViewCount)) ? Number(rawViewCount) : 0;
+  const viewLabel = `${viewCount} view${viewCount === 1 ? "" : "s"}`;
   const productName = typeof (product as any).name === "string" && (product as any).name.trim().length > 0
     ? (product as any).name
     : "Unnamed product";
@@ -121,10 +124,6 @@ export default function Product({ product, size = "default", hideShop = false, h
               {productName}
           </h3>
 
-          <div className={`text-gray-600 dark:text-gray-400 ${isCompact ? "text-[10px] mb-1" : "text-xs mb-2"}`}>
-            Qty: {stockQuantity ?? "-"}
-          </div>
-
           <div className={`flex items-center ${isCompact ? "justify-between gap-1" : "justify-between"}`}>
             <div className={`flex items-center ${isCompact ? "gap-1" : "gap-2"}`}>
               {hasValidBasePrice && hasValidDiscountPrice ? (
@@ -147,7 +146,7 @@ export default function Product({ product, size = "default", hideShop = false, h
               )}
             </div>
             <span className={`text-rose-600 ${isCompact ? "text-xs" : "text-sm font-medium"}`}>
-              View
+              {viewLabel}
             </span>
           </div>
         </div>

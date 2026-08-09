@@ -41,7 +41,7 @@ const shopAnnouncementsPromise = new Map<string, Promise<AnnouncementBanner[]>>(
 let filterAttributesCache: ProductFilterAttribute[] | null = null;
 let filterAttributesPromise: Promise<ProductFilterAttribute[]> | null = null;
 
-async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: string, isManagedScope: boolean, sortBy: "newest" | "most-viewed") {
+async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: string, isManagedScope: boolean, sortBy: "newest" | "most-viewed" | "product-count") {
   const cacheKey = `${shopId}:${isManagedScope ? "managed" : "public"}:${sortBy}`;
 
   if (shopCollectionsCache.has(cacheKey)) {
@@ -57,13 +57,16 @@ async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: stri
       kind: "shop",
       shop_display_id: shopId,
       authenticated: isManagedScope,
+      display_on_homepage: true,
       sort_by: sortBy,
       view_count: true,
     });
 
     const systemCollectionRows = await api.collections.list({
       kind: "system",
+      shop_display_id: shopId,
       authenticated: isManagedScope,
+      display_on_homepage: true,
       sort_by: sortBy,
       view_count: true,
     });
@@ -101,7 +104,11 @@ async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: stri
 
     memberEntries.forEach(([collectionItem, key, items]) => {
       memberMap[key] = items;
-      if (collectionItem.source === "shop" || items.length > 0) {
+      const shouldIncludeCollection = isManagedScope
+        ? collectionItem.source === "shop" || items.length > 0
+        : items.length > 0;
+
+      if (shouldIncludeCollection) {
         validCollections.push(collectionItem);
       }
     });
@@ -172,7 +179,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     priceRange: [0, 25000],
     selectedAttributeOptionIds: {},
   });
-  const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest" | "most-viewed">("newest");
+  const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest" | "most-viewed" | "product-count">("newest");
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
@@ -247,7 +254,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     return filteredProducts.filter((p) => selectedCollectionMemberIds.has(String(p.display_id)));
   }, [filteredProducts, selectedCollectionMemberIds]);
 
-  const { actionViewIds, actionCollectionQuery, setAllProducts } = useProductActions();
+  const { actionViewIds, actionCollectionQuery, clearActionCollection, clearSidebarActionState, setAllProducts } = useProductActions();
   const selectedAttributeOptionIds = useMemo(
     () =>
       Object.values(filters.selectedAttributeOptionIds)
@@ -358,10 +365,9 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     setCurrentPage(1);
   }, [filters, sortBy, selectedCollectionKey, actionCollectionQuery]);
 
-  // Clear selected collection filter, sort, and filters whenever switching away from the products tab.
+  // Reset sort, filters, and selected collection when switching tabs.
   useEffect(() => {
-    if (activeTab !== "products") {
-      setSelectedCollectionKey(null);
+    if (activeTab === "collections") {
       setSortBy("newest");
       setFilters({
         priceRange: [0, 25000],
@@ -369,7 +375,19 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
       });
       setShowFilters(true);
     }
-  }, [activeTab]);
+
+    if (activeTab !== "products") {
+      setSelectedCollectionKey(null);
+      clearActionCollection();
+      clearSidebarActionState();
+      setSortBy("newest");
+      setFilters({
+        priceRange: [0, 25000],
+        selectedAttributeOptionIds: {},
+      });
+      setShowFilters(true);
+    }
+  }, [activeTab, clearActionCollection, clearSidebarActionState]);
 
   const paginationOffset = (currentPage - 1) * itemsPerPage;
   const paginatedProducts = shouldUseServerProducts
@@ -495,7 +513,12 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     { key: "about", label: "About" },
   ];
 
-  const homeBannerItems = useMemo(() => shopAnnouncements, [shopAnnouncements]);
+  const homeBannerItems = useMemo(
+    () => shopAnnouncements.filter((banner) => banner.is_active && (banner.is_visible_in_shop ?? true)),
+    [shopAnnouncements]
+  );
+
+  const hasVisibleBanners = scope === "public" ? homeBannerItems.length > 0 : true;
 
   const collectionRibbonRows = useMemo(() => {
     return collections.map((collectionItem) => {
@@ -510,24 +533,20 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     });
   }, [collections, collectionMembers]);
 
-  const topCollectionRibbonRows = useMemo(() => {
-    const systemRows = collectionRibbonRows.filter((row) => row.collection.source === "system");
-    const shopRows = collectionRibbonRows.filter((row) => row.collection.source === "shop");
-
-    const selectedRows = [
-      ...systemRows.slice(0, 1),
-      ...shopRows.slice(0, 2),
-    ];
-
-    if (selectedRows.length < 3) {
-      const fallbackRows = collectionRibbonRows.filter(
-        (row) => !selectedRows.some((selected) => selected.key === row.key)
-      );
-      selectedRows.push(...fallbackRows.slice(0, 3 - selectedRows.length));
-    }
-
-    return selectedRows;
+  const overviewCollectionRows = useMemo(() => {
+    return [...collectionRibbonRows].sort((a, b) => {
+      const aOrder = Number(a.collection.homepage_order || 0);
+      const bOrder = Number(b.collection.homepage_order || 0);
+      if (bOrder !== aOrder) return bOrder - aOrder;
+      const aDate = a.collection.created_at ? new Date(a.collection.created_at).getTime() : 0;
+      const bDate = b.collection.created_at ? new Date(b.collection.created_at).getTime() : 0;
+      return bDate - aDate || b.collection.id - a.collection.id;
+    });
   }, [collectionRibbonRows]);
+
+  const topCollectionRibbonRows = useMemo(() => overviewCollectionRows, [overviewCollectionRows]);
+
+  const showOverviewCollections = overviewCollectionRows.length > 0;
 
   const latestTwentyProducts = useMemo(() => {
     return displayProducts
@@ -544,6 +563,8 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
       })
       .slice(0, 20);
   }, [displayProducts, scope]);
+
+  const showLatestProducts = !(scope === "public" && latestTwentyProducts.length === 0);
 
   const aboutRows = [
     { label: "Established", value: String(shop.year_established || "-") },
@@ -667,80 +688,88 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
 
       {activeTab === "overview" ? (
         <section>
-          <div className="px-4 pb-2">
-            <div className="mx-auto">
-              <AnnouncementsRibbon
-                items={homeBannerItems}
-                onItemClick={(item) => {
-                  if (!item.collection_id) return;
-                  const matched = collectionRibbonRows.find((row) => row.collection.id === item.collection_id);
-                  if (!matched) return;
-                  openCollectionProducts(matched.key);
-                }}
-              />
-            </div>
+          {hasVisibleBanners ? (
+        <div className="px-4 pb-2">
+          <div className="mx-auto">
+            <AnnouncementsRibbon
+              items={homeBannerItems}
+              onItemClick={(item) => {
+                if (!item.collection_id) return;
+                const matched = collectionRibbonRows.find((row) => row.collection.id === item.collection_id);
+                if (!matched) return;
+                openCollectionProducts(matched.key);
+              }}
+            />
           </div>
+        </div>
+      ) : null}
 
-          <div className="px-4 pb-4">
-            <div className="mx-auto">
+      <div className="px-4 pb-4">
+        <div className="mx-auto">
+          {showOverviewCollections ? (
+            <>
               <h2 className="mb-3 text-lg font-semibold text-gray-900 dark:text-white">Collections</h2>
               <div className="space-y-4">
                 {topCollectionRibbonRows.map((row) => (
-                  <div key={`overview-${row.collection.id}`}>
-                    <Ribbon
-                      title={row.collection.name}
-                      action={
-                        <button
-                          type="button"
-                          onClick={() => openCollectionProducts(row.key)}
-                          className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100"
-                        >
-                          View all
-                        </button>
-                      }
-                      items={row.items}
-                      renderItem={(product: ProductListItem & { id: string }) => (
-                        <div className="min-w-[12.5rem]">
-                        <Product product={product} size="default" hideShop={true} />
-                        </div>
-                      )}
-                      className="!mx-0 !rounded-3xl !border !border-slate-200 !shadow-sm !py-6 !px-6"
-                    />
-                    {row.items.length === 0 ? (
-                      <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No products yet in this collection.</p>
-                    ) : null}
+                      <div key={`overview-${row.collection.id}`}>
+                        <Ribbon
+                          title={row.collection.name}
+                          action={
+                            <button
+                              type="button"
+                              onClick={() => openCollectionProducts(row.key)}
+                              className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100"
+                            >
+                              View all
+                            </button>
+                          }
+                          items={row.items}
+                          renderItem={(product: ProductListItem & { id: string }) => (
+                            <div className="min-w-[12.5rem]">
+                              <Product product={product} size="default" hideShop={true} />
+                            </div>
+                          )}
+                          className="!mx-0 !rounded-3xl !border !border-slate-200 !shadow-sm !py-6 !px-6"
+                        />
+                        {row.items.length === 0 ? (
+                          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">No products yet in this collection.</p>
+                        ) : null}
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                </>
+              ) : null}
             </div>
           </div>
 
-          <div className="px-4 pb-8">
-            <section className="rounded-3xl border border-slate-200 bg-rose-50 p-6 shadow-sm">
-              <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">Latest Products</h2>
-                  <p className="mt-1 text-sm text-slate-600">Newest arrivals from this shop.</p>
+          {showLatestProducts ? (
+            <div className="px-4 pb-8">
+              <section className="rounded-3xl border border-slate-200 bg-rose-50 p-6 shadow-sm">
+                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-4">
+                  <div>
+                    <h2 className="text-2xl font-bold text-gray-900">Latest Products</h2>
+                    <p className="mt-1 text-sm text-slate-600">Newest arrivals from this shop.</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={openProductsTab}
+                      className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100"
+                    >
+                      View all
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={openProductsTab}
-                    className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100"
-                  >
-                    View all
-                  </button>
-                </div>
-              </div>
-              <ProductGrid
-                products={latestTwentyProducts}
-                hideShop={true}
-                showCheckboxes={false}
-                scope="public"
-                variantMode={false}
-              />
-            </section>
-          </div>
+                <ProductGrid
+                  products={latestTwentyProducts}
+                  hideShop={true}
+                  showCheckboxes={false}
+                  scope="public"
+                  variantMode={false}
+                />
+              </section>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -756,6 +785,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
               sortOptions={[
                 { value: "newest", label: "Newest" },
                 { value: "most-viewed", label: "Most Viewed" },
+                { value: "product-count", label: "Most Products" },
               ]}
               isSticky={false}
             />

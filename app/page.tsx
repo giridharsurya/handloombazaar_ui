@@ -5,8 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ProductGrid from "@/components/Product/ProductGrid";
 import ShopRibbon from "@/components/Ribbon/ShopRibbon";
-import FeaturedRibbon from "@/components/Ribbon/FeaturedRibbon";
+import Ribbon from "@/components/Ribbon/Ribbon";
 import AnnouncementsRibbon from "@/components/Ribbon/AnnouncementsRibbon";
+import Product from "@/components/Product/Product";
 import api from "@/lib/api";
 import type { AnnouncementBanner, Collection, ProductListItem, ShopStatusResponse } from "@/types/apiTypes";
 
@@ -16,12 +17,45 @@ type HomeShopItem = {
   shop_logo_url: string;
 };
 
+type HomepageRibbonRow = {
+  collection: Collection;
+  items: ProductListItem[];
+};
+
 export default function Home() {
   const router = useRouter();
   const [shops, setShops] = useState<HomeShopItem[]>([]);
   const [announcements, setAnnouncements] = useState<AnnouncementBanner[]>([]);
-  const [featuredProducts, setFeaturedProducts] = useState<ProductListItem[]>([]);
+  const [homepageRibbonRows, setHomepageRibbonRows] = useState<HomepageRibbonRow[]>([]);
   const [latestProducts, setLatestProducts] = useState<ProductListItem[]>([]);
+
+  async function loadHomepageCollections() {
+    try {
+      const collections = (await api.collections.list({ kind: "system", display_on_homepage: true, authenticated: false })) as Collection[];
+      const rows = await Promise.all(
+        collections.map(async (collection) => {
+          try {
+            const pageData = await api.collections.getProductsPage(collection.id, {
+              authenticated: false,
+              page: 1,
+              page_size: 12,
+            });
+            return {
+              collection,
+              items: (pageData.items || []).filter((item) => item.is_active !== false),
+            };
+          } catch (error) {
+            console.error("Failed to load products for collection", collection.id, error);
+            return { collection, items: [] };
+          }
+        })
+      );
+      setHomepageRibbonRows(rows || []);
+    } catch (error) {
+      console.error("Failed to load homepage collections", error);
+      setHomepageRibbonRows([]);
+    }
+  }
 
   useEffect(() => {
     let mounted = true;
@@ -52,30 +86,6 @@ export default function Home() {
       }
     };
 
-    const loadFeaturedCollectionProducts = async () => {
-      try {
-        const collections = (await api.collections.list({ kind: "system", authenticated: false })) as Collection[];
-        if (!mounted) return;
-
-        const featured = collections.find((collection: Collection) => /featured/i.test(collection.name) || /featured/i.test(collection.display_id));
-
-        if (!featured) {
-          setFeaturedProducts([]);
-          return;
-        }
-
-        const pageData = await api.collections.getProductsPage(featured.id, {
-          authenticated: false,
-          page: 1,
-          page_size: 8,
-        });
-        if (!mounted) return;
-        setFeaturedProducts((pageData.items || []).filter((item) => item.is_active !== false));
-      } catch (error) {
-        console.error("Failed to load featured collection products", error);
-      }
-    };
-
     const loadLatestProducts = async () => {
       try {
         const pageData = await api.products.getProductsPage({ page: 1, page_size: 8 });
@@ -88,7 +98,7 @@ export default function Home() {
 
     loadShops();
     loadAnnouncements();
-    loadFeaturedCollectionProducts();
+    loadHomepageCollections();
     loadLatestProducts();
 
     return () => {
@@ -104,7 +114,32 @@ export default function Home() {
 
           <ShopRibbon shops={shops} onShopClick={(shop) => router.push(`/shops/${shop.display_id}`)} />
 
-          <FeaturedRibbon items={featuredProducts.slice(0, 6)} />
+          {homepageRibbonRows.length > 0 ? (
+            <section className="space-y-4">
+              {homepageRibbonRows.map((row) => (
+                <div key={row.collection.id}>
+                  <Ribbon
+                    title={row.collection.name}
+                    action={
+                      <Link href={`/collections/${row.collection.id}`} className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100">
+                        View all
+                      </Link>
+                    }
+                    items={row.items}
+                    renderItem={(product: ProductListItem) => (
+                      <div className="min-w-[12.5rem]">
+                        <Product product={product} size="default" hideShop={true} />
+                      </div>
+                    )}
+                    className="!mx-0 !rounded-3xl !border !border-slate-200 !shadow-sm !py-6 !px-6"
+                  />
+                  {row.items.length === 0 ? (
+                    <p className="mt-2 text-sm text-slate-500">No products yet in this collection.</p>
+                  ) : null}
+                </div>
+              ))}
+            </section>
+          ) : null}
 
           <section className="rounded-3xl border border-slate-200 bg-rose-50 p-6 shadow-sm">
             <div className="flex items-center justify-between mb-4">

@@ -8,6 +8,7 @@ import {
   ProductCreateResponse,
   AdminShop,
   Collection,
+  CollectionOverviewSlot,
   Attribute,
   ProductsResponse,
   ProductsResponseData,
@@ -32,6 +33,7 @@ import {
   ShopUpdatePayload,
   AnnouncementBanner,
   AnnouncementUpsertRequest,
+  AnnouncementOrderRequest,
   PaginatedCollectionsResponse,
 } from "../types/apiTypes";
 
@@ -426,11 +428,12 @@ export const api = {
     },
   },
   collections: {
-    async list(params: { kind?: "system" | "shop"; shop_display_id?: string; sort_by?: "newest" | "most-viewed" | "product-count"; page?: number; page_size?: number; view_count?: boolean; authenticated?: boolean } = {}): Promise<ListCollectionsResponse> {
-      const { authenticated, shop_display_id, kind, sort_by, page, page_size, view_count } = params;
+    async list(params: { kind?: "system" | "shop"; shop_display_id?: string; display_on_homepage?: boolean; sort_by?: "newest" | "most-viewed" | "product-count"; page?: number; page_size?: number; view_count?: boolean; authenticated?: boolean } = {}): Promise<ListCollectionsResponse> {
+      const { authenticated, shop_display_id, display_on_homepage, kind, sort_by, page, page_size, view_count } = params;
       const qs = new URLSearchParams();
       if (kind) qs.append("kind", kind);
       if (shop_display_id) qs.append("shop_display_id", shop_display_id);
+      if (typeof display_on_homepage === "boolean") qs.append("display_on_homepage", String(display_on_homepage));
       if (sort_by) qs.append("sort_by", sort_by);
       if (page !== undefined) qs.append("page", String(page));
       if (page_size !== undefined) qs.append("page_size", String(page_size));
@@ -531,18 +534,67 @@ export const api = {
       if (!res.ok) throw new Error(await parseError(res));
       return res.json();
     },
+    async toggleHomepageDisplay(collectionId: number, displayOnHomepage: boolean, shop_display_id?: string) {
+      const body: Record<string, unknown> = {
+        collection_id: collectionId,
+        display_on_homepage: displayOnHomepage,
+      };
+      if (shop_display_id) body.shop_display_id = shop_display_id;
+
+      const res = await apiFetch(`/api/collections/homepage/toggle`, {
+        method: "POST",
+        body: JSON.stringify(body),
+        requiresAuth: true,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+    async orderHomepageCollections(collectionIds: number[], shop_display_id?: string) {
+      const body: Record<string, unknown> = {
+        collection_ids: collectionIds,
+      };
+      if (shop_display_id) body.shop_display_id = shop_display_id;
+
+      const res = await apiFetch(`/api/collections/homepage/order`, {
+        method: "POST",
+        body: JSON.stringify(body),
+        requiresAuth: true,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
     async deleteCollection(collectionId: number) {
       const res = await apiFetch(`/api/collections/${collectionId}/delete`, { method: "DELETE", requiresAuth: true });
       if (!res.ok) throw new Error(await parseError(res));
       return res;
     },
+
+    async listOverviewSlots(params: { shop_display_id?: string } = {}): Promise<CollectionOverviewSlot[]> {
+      const qs = new URLSearchParams();
+      if (params.shop_display_id) qs.append("shop_display_id", params.shop_display_id);
+      const res = await apiFetch(`/api/collections/overview?${qs.toString()}`, { requiresAuth: true });
+      if (!res.ok) throw new Error(await parseError(res));
+      const data = await res.json();
+      return Array.isArray(data.items) ? data.items : [];
+    },
+
+    async orderOverviewSlots(payload: { shop_display_id?: string; slots: Array<{ collection_id: number; slot_position: number }> }) {
+      const res = await apiFetch(`/api/collections/overview/order`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        requiresAuth: true,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
   },
 
   announcements: {
-    async list(params: { shop_display_id?: string; include_inactive?: boolean } = {}): Promise<AnnouncementBanner[]> {
+    async list(params: { shop_display_id?: string; include_inactive?: boolean; include_hidden?: boolean } = {}): Promise<AnnouncementBanner[]> {
       const qs = new URLSearchParams();
       if (params.shop_display_id) qs.append("shop_display_id", params.shop_display_id);
       if (typeof params.include_inactive === "boolean") qs.append("include_inactive", String(params.include_inactive));
+      if (typeof params.include_hidden === "boolean") qs.append("include_hidden", String(params.include_hidden));
 
       const res = await apiFetch(`/api/announcements?${qs.toString()}`, { requiresAuth: false });
       if (!res.ok) throw new Error(await parseError(res));
@@ -558,6 +610,16 @@ export const api = {
       if (!res.ok) throw new Error(await parseError(res));
       const data = await res.json();
       return data?.item || null;
+    },
+
+    async order(payload: AnnouncementOrderRequest): Promise<{ message: string }> {
+      const res = await apiFetch(`/api/announcements/order`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        requiresAuth: true,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
     },
 
     async upsert(payload: AnnouncementUpsertRequest): Promise<AnnouncementBanner> {

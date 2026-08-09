@@ -255,6 +255,7 @@ export type ProductDetail = {
   created_at: string | null;
   updated_at: string | null;
   is_active: boolean;
+  view_count?: number;
   shop: ShopSummary;
   images: string[];
   attributes: ProductAttributeItem[];
@@ -335,10 +336,28 @@ export type Collection = {
   description: string | null;
   display_id: string;
   is_active: boolean;
+  display_on_homepage?: boolean;
+  homepage_order?: number;
   view_count?: number;
   product_count?: number;
   created_at: string;
   updated_at: string;
+};
+
+export type CollectionOverviewSlot = {
+  id: number;
+  shop_id?: number | null;
+  shop_display_id?: string | null;
+  collection_id: number;
+  slot_position: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type CollectionOverviewSlotRequest = {
+  shop_display_id?: string;
+  collection_id: number;
+  slot_position: number;
 };
 
 export type ListCollectionsResponse = Collection[];
@@ -358,6 +377,8 @@ export type AnnouncementBanner = {
   banner_scope?: "system" | "shop";
   shop_id?: number | null;
   target?: string;
+  position?: number | null;
+  is_visible_in_shop?: boolean;
 };
 
 export type AnnouncementUpsertRequest = {
@@ -369,6 +390,12 @@ export type AnnouncementUpsertRequest = {
   is_active?: boolean;
   shop_display_id?: string;
   track_shop_view?: boolean;
+};
+
+export type AnnouncementOrderRequest = {
+  banner_ids: number[];
+  shop_display_id?: string;
+  visibility?: Record<number, boolean>;
 };
 
 export type Attribute = {
