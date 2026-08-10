@@ -130,6 +130,11 @@ export default function CollectionsList(props: Props) {
       });
   }, [visibleCollections, scope]);
 
+  const homepageLimit = 3;
+  const homepageCount = homepageCollections.length;
+  const homepageRemaining = Math.max(0, homepageLimit - homepageCount);
+  const isHomepageLimitReached = homepageCount >= homepageLimit;
+
   const displayCollections = React.useMemo(() => {
     if (!props.showHomepageControls) {
       return visibleCollections;
@@ -168,6 +173,7 @@ export default function CollectionsList(props: Props) {
                 </th>
                 <th className="px-3 py-2 font-medium">Name</th>
                 <th className="px-3 py-2 font-medium">Description</th>
+                <th className="px-3 py-2 font-medium">Created</th>
                 <th className="px-3 py-2 font-medium">Status</th>
                 {props.showHomepageControls ? <th className="px-3 py-2 font-medium">Homepage</th> : null}
                 {props.overviewSlots ? <th className="px-3 py-2 font-medium">Overview Slot</th> : null}
@@ -196,6 +202,7 @@ export default function CollectionsList(props: Props) {
                   );
                 }
 
+                const isVendorSystemCollection = scope === 'vendor' && col.source === 'system';
                 return (
                   <tr key={col.id} className="border-b border-slate-100">
                     <td className="px-3 py-3">
@@ -203,6 +210,7 @@ export default function CollectionsList(props: Props) {
                     </td>
                     <td className="px-3 py-3">{col.name}</td>
                     <td className="px-3 py-3 text-slate-600">{col.description || "-"}</td>
+                    <td className="px-3 py-3 text-slate-600">{col.created_at ? new Date(col.created_at).toLocaleString() : "-"}</td>
                     <td className="px-3 py-3">
                       <span
                         className={`inline-block rounded-full px-2 py-1 text-xs font-semibold ${
@@ -238,17 +246,21 @@ export default function CollectionsList(props: Props) {
                               }
                             }}
                             className={`rounded-md px-2 py-1 text-xs font-semibold ${col.display_on_homepage ? "bg-emerald-600 text-white hover:bg-emerald-500" : "bg-slate-200 text-slate-800 hover:bg-slate-300"}`}
-                            disabled={homepageUpdatingIds.includes(col.id)}
+                            disabled={homepageUpdatingIds.includes(col.id) || (!col.display_on_homepage && isHomepageLimitReached)}
                           >
-                            {homepageUpdatingIds.includes(col.id) ? "Saving..." : col.display_on_homepage ? "Remove from homepage" : "Display on homepage"}
+                            {homepageUpdatingIds.includes(col.id)
+                              ? "Saving..."
+                              : col.display_on_homepage
+                              ? "Remove from homepage"
+                              : isHomepageLimitReached
+                              ? "Limit reached"
+                              : "Display on homepage"}
                           </button>
                           <div className="inline-flex gap-2">
                             <button
                               type="button"
                               onClick={async () => {
                                 if (!props.onOrderHomepageCollections) return;
-                                const source = col.source ?? (scope === 'vendor' ? 'shop' : undefined);
-                                if (source === 'system') return;
                                 const index = homepageCollections.findIndex((item) => item.id === col.id);
                                 if (index <= 0) return;
                                 const ordered = [...homepageCollections];
@@ -279,8 +291,6 @@ export default function CollectionsList(props: Props) {
                               type="button"
                               onClick={async () => {
                                 if (!props.onOrderHomepageCollections) return;
-                                const source = col.source ?? (scope === 'vendor' ? 'shop' : undefined);
-                                if (source === 'system') return;
                                 const index = homepageCollections.findIndex((item) => item.id === col.id);
                                 if (index === -1 || index >= homepageCollections.length - 1) return;
                                 const ordered = [...homepageCollections];
@@ -315,13 +325,15 @@ export default function CollectionsList(props: Props) {
                       <td className="px-3 py-3 text-slate-700">{currentSlot ? `Slot ${currentSlot.slot_position + 1}` : "-"}</td>
                     ) : null}
                     <td className="px-3 py-3 space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => (onEdit ? onEdit(col) : null)}
-                        className="rounded-md bg-slate-600 px-2 py-1 text-xs font-semibold text-white hover:bg-slate-500"
-                      >
-                        Edit
-                      </button>
+                      {!isVendorSystemCollection ? (
+                        <button
+                          type="button"
+                          onClick={() => (onEdit ? onEdit(col) : null)}
+                          className="rounded-md bg-slate-600 px-2 py-1 text-xs font-semibold text-white hover:bg-slate-500"
+                        >
+                          Edit
+                        </button>
+                      ) : null}
 
                       {props.overviewSlots && props.allowedOverviewSlotPositions ? (
                         <div className="inline-flex flex-wrap gap-2">
@@ -368,40 +380,44 @@ export default function CollectionsList(props: Props) {
                         </div>
                       ) : null}
 
-                      <button
-                        type="button"
-                        onClick={async () => {
-                          setLocalCollections((prev) => prev.map((c) => (c.id === col.id ? { ...c, updating: true } : c)));
-                          try {
-                            const res: any = await api.collections.updateCollection(col.id, { is_active: !col.is_active });
-                            const serverActive = res?.collection?.is_active;
-                            const newActive = typeof serverActive === "boolean" ? serverActive : !col.is_active;
-                            if (initialCollections) {
-                              if (onSaved) await onSaved();
-                            } else {
-                              setLocalCollections((prev) => prev.map((c) => (c.id === col.id ? { ...c, is_active: newActive } : c)));
-                            }
-                          } catch (e) {
-                            console.error(e);
-                          } finally {
-                            setLocalCollections((prev) => prev.map((c) => (c.id === col.id ? { ...c, updating: false } : c)));
-                          }
-                        }}
-                        className="rounded-md bg-amber-600 px-2 py-1 text-xs font-semibold text-white hover:bg-amber-500"
-                        disabled={!!col.updating}
-                      >
-                        {col.updating ? "Updating..." : "Toggle Active"}
-                      </button>
+                      {!isVendorSystemCollection ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              setLocalCollections((prev) => prev.map((c) => (c.id === col.id ? { ...c, updating: true } : c)));
+                              try {
+                                const res: any = await api.collections.updateCollection(col.id, { is_active: !col.is_active });
+                                const serverActive = res?.collection?.is_active;
+                                const newActive = typeof serverActive === "boolean" ? serverActive : !col.is_active;
+                                if (initialCollections) {
+                                  if (onSaved) await onSaved();
+                                } else {
+                                  setLocalCollections((prev) => prev.map((c) => (c.id === col.id ? { ...c, is_active: newActive } : c)));
+                                }
+                              } catch (e) {
+                                console.error(e);
+                              } finally {
+                                setLocalCollections((prev) => prev.map((c) => (c.id === col.id ? { ...c, updating: false } : c)));
+                              }
+                            }}
+                            className="rounded-md bg-amber-600 px-2 py-1 text-xs font-semibold text-white hover:bg-amber-500"
+                            disabled={!!col.updating}
+                          >
+                            {col.updating ? "Updating..." : "Toggle Active"}
+                          </button>
 
-                      <button
-                        type="button"
-                        onClick={() => setShowConstraintsFor(showConstraintsFor === col.id ? null : col.id)}
-                        className="rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold"
-                      >
-                        Constraints
-                      </button>
+                          <button
+                            type="button"
+                            onClick={() => setShowConstraintsFor(showConstraintsFor === col.id ? null : col.id)}
+                            className="rounded-md bg-slate-200 px-2 py-1 text-xs font-semibold"
+                          >
+                            Constraints
+                          </button>
 
-                      <CollectionActions collectionId={col.id} onDeleted={async () => { if (onDeleted) onDeleted(col.id); else { try { await api.collections.deleteCollection(col.id); setLocalCollections((prev) => prev.filter(c => c.id !== col.id)); } catch (e) { console.error(e); } } }} />
+                          <CollectionActions collectionId={col.id} onDeleted={async () => { if (onDeleted) onDeleted(col.id); else { try { await api.collections.deleteCollection(col.id); setLocalCollections((prev) => prev.filter(c => c.id !== col.id)); } catch (e) { console.error(e); } } }} />
+                        </>
+                      ) : null}
                     </td>
                   </tr>
                 );
@@ -412,6 +428,20 @@ export default function CollectionsList(props: Props) {
       ) : (
         <p className="text-sm text-slate-600">No collections found.</p>
       )}
+
+      {scope === 'vendor' && props.showHomepageControls ? (
+        <div className="mt-4 rounded border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+          <p className="font-semibold">Homepage display limit</p>
+          {homepageLimit === homepageCount ? (
+            <p className="mt-2 text-slate-900">This shop is currently displaying <strong>{homepageCount}</strong> collections on its homepage. Remove one to add another.</p>
+          ) : homepageRemaining === 1 ? (
+            <p className="mt-2 text-slate-900">This shop can display <strong>1 more</strong> collection on its homepage.</p>
+          ) : (
+            <p className="mt-2 text-slate-900">This shop can display up to <strong>{homepageRemaining}</strong> more collections on its homepage.</p>
+          )}
+          <p className="mt-2 text-slate-600">System and shop-owned collections count together against the 3-collection homepage limit.</p>
+        </div>
+      ) : null}
 
       {showConstraintsFor ? (
         <div className="mt-4 rounded border border-slate-200 bg-white p-4">
