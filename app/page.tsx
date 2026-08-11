@@ -127,7 +127,7 @@ export default function Home() {
                     }
                     items={row.items}
                     renderItem={(product: ProductListItem) => (
-                      <div className="min-w-[12.5rem]">
+                      <div className="w-[12.5rem] min-w-0 flex-shrink-0">
                         <Product product={product} size="default" hideShop={true} />
                       </div>
                     )}

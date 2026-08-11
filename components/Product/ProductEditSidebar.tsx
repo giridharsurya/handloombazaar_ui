@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useApi } from "@/lib/ApiProvider";
+import resolveImageUrl from "@/lib/resolveImage";
 import { ProductFilterAttribute } from "@/types/apiTypes";
 
 type ProductAttributeSelection = {
@@ -86,7 +87,7 @@ export default function ProductEditSidebar({
 
   const previewItems = React.useMemo(
     () => [
-      ...existingImages.map((url) => ({ src: url, source: "existing" as const })),
+      ...existingImages.map((url) => ({ src: resolveImageUrl(url) || url, source: "existing" as const })),
       ...newImagePreviewUrls.map((url) => ({ src: url, source: "new" as const })),
     ],
     [existingImages, newImagePreviewUrls]
@@ -158,6 +159,16 @@ export default function ProductEditSidebar({
     };
   }, [api, open]);
 
+  const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
+  const allowedImageExtensions = new Set(["jpg", "jpeg", "png", "webp", "gif", "avif"]);
+  const getFileExtension = (file: File) => file.name.split(".").pop()?.toLowerCase() || "";
+  const isAllowedImageFile = (file: File) => {
+    const fileType = file.type.toLowerCase();
+    if (allowedImageTypes.has(fileType)) return true;
+    const extension = getFileExtension(file);
+    return allowedImageExtensions.has(extension);
+  };
+
   const resetAndClose = () => {
     setError(null);
     setSuccess(null);
@@ -167,7 +178,25 @@ export default function ProductEditSidebar({
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    setNewImages((prev) => [...prev, ...files]);
+
+    const allowedFiles = files.filter(isAllowedImageFile);
+    const invalidFiles = files.filter((file) => !isAllowedImageFile(file));
+    const currentCount = existingImages.length + newImages.length;
+    const availableSlots = Math.max(0, 5 - currentCount);
+
+    if (invalidFiles.length > 0) {
+      setError("Only JPG, PNG, WebP, GIF, and AVIF image formats are allowed.");
+    }
+    if (availableSlots <= 0) {
+      setError("Maximum 5 images can be uploaded.");
+      e.target.value = "";
+      return;
+    }
+
+    setNewImages((prev) => [...prev, ...allowedFiles.slice(0, availableSlots)]);
+    if (allowedFiles.length > availableSlots) {
+      setError("Maximum 5 images can be uploaded.");
+    }
     if (previewItems.length === 0) {
       setPrimaryImageIndex(0);
     }
@@ -454,7 +483,14 @@ export default function ProductEditSidebar({
             <div className="mt-3">
               <label className="inline-flex cursor-pointer items-center rounded border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 hover:bg-slate-100">
                 Add Images
-                <input type="file" accept="image/*" multiple className="hidden" onChange={handleImageUpload} />
+                <input
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+                  multiple
+                  className="hidden"
+                  onChange={handleImageUpload}
+                  disabled={existingImages.length + newImages.length >= 5}
+                />
               </label>
             </div>
 

@@ -23,6 +23,10 @@ type ShopCollectionItem = {
   name: string;
   description?: string | null;
   is_active?: boolean;
+  display_on_homepage?: boolean;
+  homepage_order?: number;
+  created_at?: string | null;
+  updated_at?: string | null;
 };
 
 type CollectionMemberItem = ProductListItem & { id: string };
@@ -57,7 +61,6 @@ async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: stri
       kind: "shop",
       shop_display_id: shopId,
       authenticated: isManagedScope,
-      display_on_homepage: true,
       sort_by: sortBy,
       view_count: true,
     });
@@ -66,7 +69,6 @@ async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: stri
       kind: "system",
       shop_display_id: shopId,
       authenticated: isManagedScope,
-      display_on_homepage: true,
       sort_by: sortBy,
       view_count: true,
     });
@@ -534,14 +536,16 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
   }, [collections, collectionMembers]);
 
   const overviewCollectionRows = useMemo(() => {
-    return [...collectionRibbonRows].sort((a, b) => {
-      const aOrder = Number(a.collection.homepage_order || 0);
-      const bOrder = Number(b.collection.homepage_order || 0);
-      if (bOrder !== aOrder) return bOrder - aOrder;
-      const aDate = a.collection.created_at ? new Date(a.collection.created_at).getTime() : 0;
-      const bDate = b.collection.created_at ? new Date(b.collection.created_at).getTime() : 0;
-      return bDate - aDate || b.collection.id - a.collection.id;
-    });
+    return [...collectionRibbonRows]
+      .filter((row) => row.collection.display_on_homepage)
+      .sort((a, b) => {
+        const aOrder = Number(a.collection.homepage_order || 0);
+        const bOrder = Number(b.collection.homepage_order || 0);
+        if (bOrder !== aOrder) return bOrder - aOrder;
+        const aDate = a.collection.created_at ? new Date(a.collection.created_at).getTime() : 0;
+        const bDate = b.collection.created_at ? new Date(b.collection.created_at).getTime() : 0;
+        return bDate - aDate || b.collection.id - a.collection.id;
+      });
   }, [collectionRibbonRows]);
 
   const topCollectionRibbonRows = useMemo(() => overviewCollectionRows, [overviewCollectionRows]);
@@ -725,7 +729,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
                           }
                           items={row.items}
                           renderItem={(product: ProductListItem & { id: string }) => (
-                            <div className="min-w-[12.5rem]">
+                            <div className="w-[12.5rem] min-w-0 flex-shrink-0">
                               <Product product={product} size="default" hideShop={true} />
                             </div>
                           )}

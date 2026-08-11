@@ -53,7 +53,7 @@ export default function Product({ product, size = "default", hideShop = false, h
   const formatPrice = (value: number) => value.toLocaleString("en-IN");
 
   return (
-    <div className="relative">
+    <div className="relative min-w-0 w-full">
       {showCheckboxes && (
         <label className="absolute z-20 top-2 left-2">
           <input
@@ -74,7 +74,7 @@ export default function Product({ product, size = "default", hideShop = false, h
         href={`/sarees/${product.display_id}`}
         prefetch={false}
         aria-label={`View ${productName}`}
-        className={`block bg-white dark:bg-gray-900 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-rose-500 ${
+        className={`block w-full min-w-0 bg-white dark:bg-gray-900 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow focus:outline-none focus:ring-2 focus:ring-rose-500 ${
           isMainProduct
             ? "border-4 border-red-500 dark:border-red-400"
             : isVariantProduct
@@ -120,9 +120,9 @@ export default function Product({ product, size = "default", hideShop = false, h
             </div>
           )}
 
-            <h3 className={`font-semibold text-gray-900 dark:text-white truncate whitespace-nowrap ${isCompact ? "text-xs mb-1" : "text-sm mb-2"}`} title={productName}>
+            <h3 className={`font-semibold text-gray-900 dark:text-white truncate whitespace-nowrap overflow-hidden ${isCompact ? "text-xs mb-1" : "text-sm mb-2"}`} title={productName}>
               {productName}
-          </h3>
+            </h3>
 
           <div className={`flex items-center ${isCompact ? "justify-between gap-1" : "justify-between"}`}>
             <div className={`flex items-center ${isCompact ? "gap-1" : "gap-2"}`}>

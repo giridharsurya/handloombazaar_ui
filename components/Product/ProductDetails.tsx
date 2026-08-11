@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import BackendImage from "@/components/BackendImage/BackendImage";
 import Ribbon from "@/components/Ribbon/Ribbon";
 import ProductCard from "@/components/Product/Product";
@@ -67,12 +67,19 @@ export default function ProductDetails({
     return undefined;
   };
 
+  const resolveItemImages = (item: any) => {
+    if (!item) return [];
+    if (item.images && Array.isArray(item.images) && item.images.length) return item.images.filter(Boolean);
+    if (item.image_url) return [item.image_url];
+    return [];
+  };
+
   const galleryImages = useMemo(() => {
     const pool = [
-      resolveItemImage(currentProduct),
-      ...variants.map((item) => resolveItemImage(item)),
-      ...similarFromShop.map((item) => resolveItemImage(item)),
-      ...similarFromOtherShops.map((item) => resolveItemImage(item)),
+      ...resolveItemImages(currentProduct),
+      ...variants.flatMap((item) => resolveItemImages(item)),
+      ...similarFromShop.flatMap((item) => resolveItemImages(item)),
+      ...similarFromOtherShops.flatMap((item) => resolveItemImages(item)),
     ];
 
     const filtered = pool.filter((url) => url && !String(url).startsWith("blob:"));
@@ -84,6 +91,114 @@ export default function ProductDetails({
     const img = resolveItemImage(currentProduct);
     return img && !String(img).startsWith("blob:") ? img : undefined;
   });
+  const [isZoomOpen, setIsZoomOpen] = useState(false);
+  const [zoomScale, setZoomScale] = useState(1);
+  const [panX, setPanX] = useState(0);
+  const [panY, setPanY] = useState(0);
+  const [isPanning, setIsPanning] = useState(false);
+  const [zoomContainerSize, setZoomContainerSize] = useState({ width: 0, height: 0 });
+  const zoomContainerRef = useRef<HTMLDivElement | null>(null);
+  const pointerState = useRef<{ x: number; y: number; panX: number; panY: number } | null>(null);
+
+  const openZoom = () => {
+    setIsZoomOpen(true);
+    setZoomScale(1);
+    setPanX(0);
+    setPanY(0);
+    setZoomContainerSize({ width: 0, height: 0 });
+  };
+
+  const closeZoom = () => {
+    setIsZoomOpen(false);
+    setZoomScale(1);
+    setPanX(0);
+    setPanY(0);
+    setIsPanning(false);
+    pointerState.current = null;
+  };
+
+  const handleZoomWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const delta = -event.deltaY / 240;
+    setZoomScale((prev) => {
+      const next = Number(Math.min(3, Math.max(1, prev + delta)).toFixed(2));
+      if (next === 1) {
+        setPanX(0);
+        setPanY(0);
+      }
+      return next;
+    });
+  };
+
+  const handlePointerDown = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (zoomScale <= 1) return;
+    event.preventDefault();
+    setIsPanning(true);
+    pointerState.current = {
+      x: event.clientX,
+      y: event.clientY,
+      panX,
+      panY,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const clampPan = (x: number, y: number) => {
+    if (!zoomContainerSize.width || !zoomContainerSize.height) return { x, y };
+
+    const imageWidth = zoomContainerSize.width * zoomScale;
+    const imageHeight = zoomContainerSize.height * zoomScale;
+    const maxOffsetX = Math.max(0, (imageWidth - zoomContainerSize.width) / 2);
+    const maxOffsetY = Math.max(0, (imageHeight - zoomContainerSize.height) / 2);
+
+    return {
+      x: Math.min(maxOffsetX, Math.max(-maxOffsetX, x)),
+      y: Math.min(maxOffsetY, Math.max(-maxOffsetY, y)),
+    };
+  };
+
+  const handlePointerMove = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPanning || !pointerState.current) return;
+    event.preventDefault();
+    const deltaX = event.clientX - pointerState.current.x;
+    const deltaY = event.clientY - pointerState.current.y;
+    const { x, y } = clampPan(pointerState.current.panX + deltaX, pointerState.current.panY + deltaY);
+    setPanX(x);
+    setPanY(y);
+  };
+
+  const handlePointerUp = (event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isPanning) return;
+    event.preventDefault();
+    setIsPanning(false);
+    pointerState.current = null;
+    try {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    } catch {
+      // ignore
+    }
+  };
+
+  React.useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    if (isZoomOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = previousOverflow;
+    }
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isZoomOpen]);
+
+  React.useEffect(() => {
+    if (!isZoomOpen || !zoomContainerRef.current) return;
+    const rect = zoomContainerRef.current.getBoundingClientRect();
+    setZoomContainerSize({ width: rect.width, height: rect.height });
+  }, [isZoomOpen, selectedImage]);
+
+  const createdOn = currentProduct.created_at ?? (currentProduct as any).created_on;
+  const formattedCreatedOn = createdOn ? new Date(createdOn).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" }) : null;
 
   React.useEffect(() => {
     const img = resolveItemImage(currentProduct);
@@ -126,14 +241,64 @@ export default function ProductDetails({
           </div>
 
           <div className="rounded-xl overflow-hidden pb-2">
-            <div className="relative aspect-[3/4] w-full max-w-sm mx-auto">
+            <div className="relative aspect-[3/4] w-full max-w-sm mx-auto group">
               {selectedImage ? (
-                <BackendImage src={selectedImage} alt={currentProduct.name} fill className="object-contain" priority />
+                <>
+                  <button
+                    type="button"
+                    onClick={openZoom}
+                    className="absolute inset-0 z-10 rounded-xl bg-black/10 opacity-0 transition-opacity duration-200 hover:opacity-100 focus:outline-none"
+                    aria-label="Open image zoom"
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center rounded-xl text-sm font-semibold text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 pointer-events-none">
+                    Click to zoom
+                  </div>
+                  <BackendImage
+                    src={selectedImage}
+                    alt={currentProduct.name}
+                    fill
+                    className="object-contain transition-transform duration-300 group-hover:scale-105"
+                    priority
+                  />
+                </>
               ) : (
                 <div className="w-full h-full bg-gray-100" />
               )}
             </div>
           </div>
+
+          {isZoomOpen && selectedImage ? (
+            <div
+              className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+              onClick={closeZoom}
+              onWheelCapture={handleZoomWheel}
+              onWheel={handleZoomWheel}
+              role="dialog"
+              aria-modal="true"
+              style={{ touchAction: "none" }}
+            >
+              <div className="relative h-full w-full max-w-4xl overflow-hidden rounded-3xl border border-white/10 bg-black" onClick={(event) => event.stopPropagation()}>
+                <div
+                  className="relative h-full w-full transition-transform duration-150"
+                  ref={zoomContainerRef}
+                  style={{ transform: `scale(${zoomScale}) translate(${panX / zoomScale}px, ${panY / zoomScale}px)`, touchAction: "none", cursor: zoomScale > 1 ? (isPanning ? "grabbing" : "grab") : "auto" }}
+                  onPointerDown={handlePointerDown}
+                  onPointerMove={handlePointerMove}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerUp}
+                  onWheel={handleZoomWheel}
+                >
+                  <BackendImage
+                    src={selectedImage}
+                    alt={currentProduct.name}
+                    fill
+                    className="object-cover"
+                    priority
+                  />
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="p-2 lg:p-3">
@@ -178,6 +343,12 @@ export default function ProductDetails({
           <div className="mt-3 text-sm text-gray-700 dark:text-gray-300">
             <span className="font-medium">Stock:</span> {currentProduct.stock_quantity ?? "N/A"}
           </div>
+
+          {formattedCreatedOn ? (
+            <div className="mt-2 text-sm text-gray-700 dark:text-gray-300">
+              <span className="font-medium">Created on:</span> {formattedCreatedOn}
+            </div>
+          ) : null}
 
           {currentProduct.video_url ? (
             <div className="mt-2 text-sm">

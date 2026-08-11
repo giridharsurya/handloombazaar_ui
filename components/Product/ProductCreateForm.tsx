@@ -53,6 +53,17 @@ export default function ProductCreateForm({
   const [availableAttributes, setAvailableAttributes] = useState<ProductFilterAttribute[]>([]);
   const [selectedOptionByDefinition, setSelectedOptionByDefinition] = useState<Record<number, number | null>>({});
 
+  const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
+  const allowedImageExtensions = new Set(["jpg", "jpeg", "png", "webp", "gif", "avif"]);
+
+  const getFileExtension = (file: File) => file.name.split(".").pop()?.toLowerCase() || "";
+  const isAllowedImageFile = (file: File) => {
+    const fileType = file.type.toLowerCase();
+    if (allowedImageTypes.has(fileType)) return true;
+    const extension = getFileExtension(file);
+    return allowedImageExtensions.has(extension);
+  };
+
   const effectiveShopDisplayId = useMemo(() => {
     if (allowShopSelect) return formData.selectedShop;
     return fixedShopDisplayId || "";
@@ -98,7 +109,26 @@ export default function ProductCreateForm({
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
-    setUploadedImages((prev) => [...prev, ...files]);
+    const allowedFiles = files.filter(isAllowedImageFile);
+    const invalidFiles = files.filter((file) => !isAllowedImageFile(file));
+
+    if (invalidFiles.length > 0) {
+      setError("Only JPG, PNG, WebP, GIF, and AVIF image formats are allowed.");
+    }
+
+    setUploadedImages((prev) => {
+      const availableSlots = 5 - prev.length;
+      if (availableSlots <= 0) {
+        setError("Maximum 5 images can be uploaded.");
+        return prev;
+      }
+      if (allowedFiles.length > availableSlots) {
+        setError("Maximum 5 images can be uploaded.");
+      }
+      return [...prev, ...allowedFiles.slice(0, availableSlots)];
+    });
+
+    e.target.value = "";
   };
 
   const removeImage = (index: number) => {
@@ -131,6 +161,10 @@ export default function ProductCreateForm({
     }
     if (uploadedImages.length === 0) {
       setError("At least one image is required");
+      return;
+    }
+    if (uploadedImages.length > 5) {
+      setError("A maximum of 5 images is allowed.");
       return;
     }
     if (primaryImageIndex === null) {
@@ -369,9 +403,17 @@ export default function ProductCreateForm({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                   </svg>
                   <p className="text-sm text-slate-600">Click to upload images</p>
-                  <input type="file" multiple accept="image/*" onChange={handleImageUpload} className="hidden" />
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/png,image/jpeg,image/webp,image/gif,image/avif"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                    disabled={uploadedImages.length >= 5}
+                  />
                 </label>
               </div>
+              <p className="text-xs text-slate-500">Max 5 images. Supported formats: JPG, PNG, WebP, GIF, AVIF.</p>
 
               {uploadedImages.length > 0 && (
                 <div className="grid grid-cols-3 gap-4">
