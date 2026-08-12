@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useCallback } from "react";
+import React, { createContext, useContext, useState, useCallback, Dispatch, SetStateAction } from "react";
 import api from "@/lib/api";
 import { useProductSelection } from "@/lib/productSelection";
 
@@ -22,7 +22,7 @@ type SidebarActionState = {
 
 type ProductActionsCtx = {
   allProducts: any[];
-  setAllProducts: (p: any[]) => void;
+  setAllProducts: Dispatch<SetStateAction<any[]>>;
   actionViewIds: string[] | null;
   setActionViewIds: (ids: string[] | null) => void;
   actionCollectionQuery: ActionCollectionQuery | null;
@@ -31,7 +31,7 @@ type ProductActionsCtx = {
   applyViewForSystemCollection: (collectionId: number, mode: "add" | "delete" | "view") => Promise<void>;
   confirmAction: (opts: { subtype: "vendor" | "system"; shopId?: string; collectionId?: number; mode?: "add" | "delete"; selectedIds?: string[] }) => Promise<any>;
   sidebarActionState: SidebarActionState;
-  setSidebarActionState: (state: SidebarActionState) => void;
+  setSidebarActionState: Dispatch<SetStateAction<SidebarActionState>>;
   clearSidebarActionState: () => void;
 };
 

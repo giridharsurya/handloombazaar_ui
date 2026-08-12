@@ -33,6 +33,11 @@ function SystemCollectionProductsInner() {
   });
   const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest" | "most-viewed">("newest");
   const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>([]);
+
+  const handleSortChange = (sort: "price-low" | "price-high" | "newest" | "most-viewed" | "product-count") => {
+    if (sort === "product-count") return;
+    setSortBy(sort);
+  };
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
@@ -206,7 +211,7 @@ function SystemCollectionProductsInner() {
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
           sortBy={sortBy}
-          onSortChange={setSortBy}
+          onSortChange={handleSortChange}
           isSticky={isHeaderSticky}
         />
 

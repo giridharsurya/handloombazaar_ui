@@ -28,6 +28,7 @@ import {
   ShopStatusResponse,
   ListShopsResponse,
   PaginatedShopsResponse,
+  ListCollectionsResponse,
   GetShopDetailRequest,
   ShopDetail,
   ShopUpdatePayload,
@@ -73,6 +74,32 @@ async function parseError(response: Response) {
 }
 
 export const api = {
+  analytics: {
+    async trackHomepageVisit(): Promise<{ success: boolean; message: string; entity_type: string; entity_id: number }> {
+      const res = await apiFetch(`/api/analytics/homepage/visit`, { method: "POST", requiresAuth: false });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async getShopAnalytics(
+      displayId: string,
+      period: "all" | "week" | "month" | "quarter" | "halfyear" | "year" | "custom" = "all",
+      options: { month?: string; year?: string; fromDate?: string; toDate?: string } = {},
+    ) {
+      const params = new URLSearchParams({ period });
+      if (options.month) params.set("month", options.month);
+      if (options.year) params.set("year", options.year);
+      if (options.fromDate) params.set("from_date", options.fromDate);
+      if (options.toDate) params.set("to_date", options.toDate);
+
+      const res = await apiFetch(`/api/analytics/shop/${encodeURIComponent(displayId)}?${params.toString()}`, {
+        requiresAuth: true,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+  },
+
   auth: {
     async login(payload: LoginRequest): Promise<LoginResponse> {
       let existingToken: string | undefined = undefined;
@@ -185,6 +212,18 @@ export const api = {
 
     async getProductVariants(displayId: string, { authenticated = false }: { authenticated?: boolean } = {}): Promise<ProductVariantsResponse> {
       const res = await apiFetch(`/api/products/${encodeURIComponent(displayId)}/variants`, { requiresAuth: !!authenticated });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async getSimilarProductsFromShop(displayId: string, { authenticated = false }: { authenticated?: boolean } = {}): Promise<ProductVariantsResponse> {
+      const res = await apiFetch(`/api/products/${encodeURIComponent(displayId)}/similar-from-shop`, { requiresAuth: !!authenticated });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async getSimilarProductsFromOtherShops(displayId: string, { authenticated = false }: { authenticated?: boolean } = {}): Promise<ProductVariantsResponse> {
+      const res = await apiFetch(`/api/products/${encodeURIComponent(displayId)}/similar-from-other-shops`, { requiresAuth: !!authenticated });
       if (!res.ok) throw new Error(await parseError(res));
       return res.json();
     },

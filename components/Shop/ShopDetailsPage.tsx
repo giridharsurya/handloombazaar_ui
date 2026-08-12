@@ -38,6 +38,9 @@ type ShopDetailsPageProps = {
   actionsSidebar?: React.ReactNode;
 };
 
+type ShopCollectionSortBy = "newest" | "most-viewed" | "product-count";
+type ShopPageSortBy = "price-low" | "price-high" | ShopCollectionSortBy;
+
 const shopCollectionsCache = new Map<string, { collections: ShopCollectionItem[]; collectionMembers: Record<string, CollectionMemberItem[]> }>();
 const shopCollectionsPromise = new Map<string, Promise<{ collections: ShopCollectionItem[]; collectionMembers: Record<string, CollectionMemberItem[]> }>>();
 const shopAnnouncementsCache = new Map<string, AnnouncementBanner[]>();
@@ -45,8 +48,9 @@ const shopAnnouncementsPromise = new Map<string, Promise<AnnouncementBanner[]>>(
 let filterAttributesCache: ProductFilterAttribute[] | null = null;
 let filterAttributesPromise: Promise<ProductFilterAttribute[]> | null = null;
 
-async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: string, isManagedScope: boolean, sortBy: "newest" | "most-viewed" | "product-count") {
-  const cacheKey = `${shopId}:${isManagedScope ? "managed" : "public"}:${sortBy}`;
+async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: string, isManagedScope: boolean, sortBy: ShopPageSortBy) {
+  const collectionSortBy: ShopCollectionSortBy = sortBy === "price-low" || sortBy === "price-high" ? "newest" : sortBy;
+  const cacheKey = `${shopId}:${isManagedScope ? "managed" : "public"}:${collectionSortBy}`;
 
   if (shopCollectionsCache.has(cacheKey)) {
     return shopCollectionsCache.get(cacheKey)!;
@@ -61,7 +65,7 @@ async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: stri
       kind: "shop",
       shop_display_id: shopId,
       authenticated: isManagedScope,
-      sort_by: sortBy,
+      sort_by: collectionSortBy,
       view_count: true,
     });
 
@@ -69,7 +73,7 @@ async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: stri
       kind: "system",
       shop_display_id: shopId,
       authenticated: isManagedScope,
-      sort_by: sortBy,
+      sort_by: collectionSortBy,
       view_count: true,
     });
 
@@ -181,7 +185,12 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     priceRange: [0, 25000],
     selectedAttributeOptionIds: {},
   });
-  const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest" | "most-viewed" | "product-count">("newest");
+  const [sortBy, setSortBy] = useState<ShopPageSortBy>("newest");
+
+  const handleSortChange = (sort: ShopPageSortBy) => {
+    if (sort === "product-count" && activeTab !== "collections") return;
+    setSortBy(sort);
+  };
   const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
@@ -278,13 +287,16 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
       setServerProductsError("");
 
       try {
-        const baseParams = {
+        const normalizedSortBy: Exclude<ShopPageSortBy, "product-count"> =
+        sortBy === "product-count" ? "newest" : sortBy;
+
+      const baseParams = {
           authenticated: true,
           page: currentPage,
           page_size: itemsPerPage,
           min_price: filters.priceRange[0],
           max_price: filters.priceRange[1],
-          sort_by: sortBy,
+          sort_by: normalizedSortBy,
           attribute_option_ids: selectedAttributeOptionIds,
         } as const;
 
@@ -785,7 +797,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
               productCount={collectionRibbonRows.length}
               showFiltersToggle={false}
               sortBy={sortBy}
-              onSortChange={setSortBy}
+              onSortChange={handleSortChange}
               sortOptions={[
                 { value: "newest", label: "Newest" },
                 { value: "most-viewed", label: "Most Viewed" },
@@ -814,7 +826,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
                     }
                     items={row.items}
                     renderItem={(product: ProductListItem & { id: string }) => (
-                      <div className="min-w-[12.5rem]">
+                      <div className="w-[12.5rem] min-w-0 flex-shrink-0">
                         <Product product={product} size="default" hideShop={true} />
                       </div>
                     )}
@@ -896,7 +908,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
               onToggleFilters={() => setShowFilters(!showFilters)}
               filtersOpen={showFilters}
               sortBy={sortBy}
-              onSortChange={setSortBy}
+              onSortChange={handleSortChange}
               isSticky={isHeaderSticky}
             />
 

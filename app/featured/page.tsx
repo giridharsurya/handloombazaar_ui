@@ -19,6 +19,11 @@ export default function FeaturedPage() {
   });
   const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest" | "most-viewed">("newest");
   const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>([]);
+
+  const handleSortChange = (sort: "price-low" | "price-high" | "newest" | "most-viewed" | "product-count") => {
+    if (sort === "product-count") return;
+    setSortBy(sort);
+  };
   const [pageProducts, setPageProducts] = useState<ProductListItem[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -162,7 +167,7 @@ export default function FeaturedPage() {
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
           sortBy={sortBy}
-          onSortChange={setSortBy}
+          onSortChange={handleSortChange}
           isSticky={isHeaderSticky}
         />
 

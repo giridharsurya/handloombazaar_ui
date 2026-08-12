@@ -143,7 +143,7 @@ export default function SystemCollectionsPage() {
                     items={row.items}
                     renderItem={(product: RibbonProduct) => (
                       <div className="w-[12.5rem] min-w-0 flex-shrink-0">
-                        <Product product={product} size="default" hideShop={true} />
+                        <Product product={product} size="default" hideShop={false} />
                       </div>
                     )}
                     className="!mx-0 !rounded-3xl !border !border-slate-200 !shadow-sm !py-6 !px-6"

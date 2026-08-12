@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import SearchBar from "@/components/SearchBar/SearchBar";
 // Navigation links inlined below (removed `NavigationRibbon` component)
 import { LoginButton } from "@/components/Login/LoginButton";
@@ -24,8 +25,11 @@ function formatCurrentTime() {
 }
 
 export default function Header() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const headerRef = useRef<HTMLDivElement | null>(null);
   const [currentTime, setCurrentTime] = useState(() => formatCurrentTime());
+  const searchValue = searchParams.get("search") ?? "";
 
   useEffect(() => {
     if (!headerRef.current) {
@@ -75,7 +79,16 @@ export default function Header() {
               </Link>
             </div>
             <div className="w-full max-w-2xl">
-              <SearchBar />
+              <SearchBar
+                value={searchValue}
+                onSearch={(query) => {
+                  if (!query) {
+                    router.push("/sarees");
+                    return;
+                  }
+                  router.push(`/sarees?search=${encodeURIComponent(query)}`);
+                }}
+              />
             </div>
           </div>
           <div className="flex flex-col items-end gap-2 flex-shrink-0">

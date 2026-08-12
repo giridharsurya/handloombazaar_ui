@@ -29,6 +29,19 @@ export default function Home() {
   const [homepageRibbonRows, setHomepageRibbonRows] = useState<HomepageRibbonRow[]>([]);
   const [latestProducts, setLatestProducts] = useState<ProductListItem[]>([]);
 
+  const handleAnnouncementClick = (item: AnnouncementBanner) => {
+    const target = item.target ?? "/";
+    try {
+      const url = new URL(target, window.location.origin);
+      if (url.pathname === "/sarees" && item.title) {
+        url.searchParams.set("announcement_title", item.title);
+      }
+      router.push(`${url.pathname}${url.search}${url.hash}`);
+    } catch (error) {
+      router.push(target);
+    }
+  };
+
   async function loadHomepageCollections() {
     try {
       const collections = (await api.collections.list({ kind: "system", display_on_homepage: true, authenticated: false })) as Collection[];
@@ -59,6 +72,14 @@ export default function Home() {
 
   useEffect(() => {
     let mounted = true;
+
+    const trackHomepageVisit = async () => {
+      try {
+        await api.analytics.trackHomepageVisit();
+      } catch (error) {
+        console.error("Failed to track homepage visit", error);
+      }
+    };
 
     const loadShops = async () => {
       try {
@@ -96,6 +117,7 @@ export default function Home() {
       }
     };
 
+    trackHomepageVisit();
     loadShops();
     loadAnnouncements();
     loadHomepageCollections();
@@ -110,7 +132,7 @@ export default function Home() {
     <main className="min-h-screen w-full bg-white dark:bg-gray-950">
       <div className="w-full px-4">
         <div className="w-full space-y-4">
-          <AnnouncementsRibbon items={announcements} />
+          <AnnouncementsRibbon items={announcements} onItemClick={handleAnnouncementClick} />
 
           <ShopRibbon shops={shops} onShopClick={(shop) => router.push(`/shops/${shop.display_id}`)} />
 
@@ -128,7 +150,7 @@ export default function Home() {
                     items={row.items}
                     renderItem={(product: ProductListItem) => (
                       <div className="w-[12.5rem] min-w-0 flex-shrink-0">
-                        <Product product={product} size="default" hideShop={true} />
+                        <Product product={product} size="default" hideShop={false} />
                       </div>
                     )}
                     className="!mx-0 !rounded-3xl !border !border-slate-200 !shadow-sm !py-6 !px-6"

@@ -49,6 +49,11 @@ function CollectionDetailsPage({
   });
   const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest" | "most-viewed">("newest");
   const [showFilters, setShowFilters] = useState(true);
+
+  const handleSortChange = (sort: "price-low" | "price-high" | "newest" | "most-viewed" | "product-count") => {
+    if (sort === "product-count") return;
+    setSortBy(sort);
+  };
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const productsSectionRef = useRef<HTMLElement | null>(null);
@@ -175,7 +180,7 @@ function CollectionDetailsPage({
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
           sortBy={sortBy}
-          onSortChange={setSortBy}
+          onSortChange={handleSortChange}
           isSticky={isHeaderSticky}
         />
 

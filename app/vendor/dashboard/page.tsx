@@ -248,6 +248,22 @@ export default function ShopDashboard() {
               </>
             )}
           </div>
+
+          <div className={`${cardBaseClass} ${isApproved ? cardEnabledClass : cardDisabledClass}`}>
+            {isApproved ? (
+              <Link href="/vendor/analytics" className="block">
+                <h2 className="text-xl font-semibold text-slate-900">Analytics</h2>
+                <p className="mt-2 text-sm text-slate-600">Review shop visits, product views, and collection performance.</p>
+                <p className="mt-4 text-sm font-semibold text-slate-900">View Analytics →</p>
+              </Link>
+            ) : (
+              <>
+                <h2 className="text-xl font-semibold text-slate-900">Analytics</h2>
+                <p className="mt-2 text-sm text-slate-600">Review shop visits, product views, and collection performance.</p>
+                <p className="mt-4 text-sm text-slate-500">Available after approval</p>
+              </>
+            )}
+          </div>
         </section>
       </div>
     </main>

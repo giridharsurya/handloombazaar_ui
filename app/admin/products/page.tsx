@@ -39,6 +39,13 @@ function AllProductsPageInner() {
   const sidebarRef = useRef<HTMLElement | null>(null);
   const productsSectionRef = useRef<HTMLElement | null>(null);
 
+  const handleSortChange = (sort: "price-low" | "price-high" | "newest" | "most-viewed" | "product-count") => {
+    if (sort === "product-count") {
+      return;
+    }
+    setSortBy(sort);
+  };
+
   useEffect(() => {
     if (isLoading) return;
     if (!auth) {
@@ -200,7 +207,7 @@ function AllProductsPageInner() {
           onToggleFilters={() => setShowFilters(!showFilters)}
           filtersOpen={showFilters}
           sortBy={sortBy}
-          onSortChange={setSortBy}
+          onSortChange={handleSortChange}
           isSticky={isHeaderSticky}
         />
 

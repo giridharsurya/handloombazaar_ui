@@ -112,6 +112,44 @@ export type ProductListItem = {
   attributes: { definition_id: number; option_id: number; option_value?: string }[]; // attribute summary always returned for product list
 };
 
+export type AnalyticsPeriod = "all" | "week" | "month" | "quarter" | "halfyear" | "year" | "custom";
+
+export type ShopAnalyticsSummary = {
+  shop_display_id: string;
+  shop_name: string;
+  period: string;
+  total_shop_views: number;
+  total_product_views: number;
+  total_collection_views: number;
+  product_count: number;
+  collection_count: number;
+  unique_visitor_count: number;
+};
+
+export type ShopAnalyticsTimelinePoint = {
+  date: string;
+  shop_views: number;
+  product_views: number;
+  collection_views: number;
+  total_views: number;
+};
+
+export type ShopAnalyticsTopItem = {
+  name: string;
+  value: string;
+  view_count: number;
+};
+
+export type ShopAnalyticsResponse = {
+  shop_display_id: string;
+  shop_name: string;
+  period: AnalyticsPeriod | string;
+  summary: ShopAnalyticsSummary;
+  timeline: ShopAnalyticsTimelinePoint[];
+  top_attributes: ShopAnalyticsTopItem[];
+  top_collections: ShopAnalyticsTopItem[];
+};
+
 export type ProductFilterAttribute = {
   id: number;
   name: string;
@@ -167,6 +205,7 @@ export type ProductListQueryParams = {
   sort_by?: "newest" | "price-low" | "price-high" | "most-viewed";
   attribute_filters?: string[];
   attribute_option_ids?: number[];
+  product_group_id?: number | null;
   authenticated?: boolean;
 };
 

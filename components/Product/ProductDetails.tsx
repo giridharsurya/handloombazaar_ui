@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import BackendImage from "@/components/BackendImage/BackendImage";
+import Link from "next/link";
 import Ribbon from "@/components/Ribbon/Ribbon";
 import ProductCard from "@/components/Product/Product";
 import ProductEditSidebar from "@/components/Product/ProductEditSidebar";
@@ -25,7 +26,7 @@ export default function ProductDetails({
 }: ProductDetailsProps) {
   const { auth } = useAuth();
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [currentProduct, setCurrentProduct] = useState<any>(product);
+  const [currentProduct, setCurrentProduct] = useState<Product>(product);
   const hasDiscountPrice = currentProduct?.discount_price !== null && currentProduct?.discount_price !== undefined;
 
   const currentShopDisplayId =
@@ -75,17 +76,12 @@ export default function ProductDetails({
   };
 
   const galleryImages = useMemo(() => {
-    const pool = [
-      ...resolveItemImages(currentProduct),
-      ...variants.flatMap((item) => resolveItemImages(item)),
-      ...similarFromShop.flatMap((item) => resolveItemImages(item)),
-      ...similarFromOtherShops.flatMap((item) => resolveItemImages(item)),
-    ];
+    const pool = [...resolveItemImages(currentProduct)];
 
     const filtered = pool.filter((url) => url && !String(url).startsWith("blob:"));
     const unique = filtered.filter((url, index) => filtered.indexOf(url) === index);
     return unique.slice(0, 8);
-  }, [currentProduct, variants, similarFromShop, similarFromOtherShops]);
+  }, [currentProduct]);
 
   const [selectedImage, setSelectedImage] = useState<string | undefined>(() => {
     const img = resolveItemImage(currentProduct);
@@ -306,6 +302,10 @@ export default function ProductDetails({
             {currentProduct.name}
           </h1>
 
+          {currentProduct.display_id ? (
+            <p className="mt-1 text-sm text-slate-500">SKU: {currentProduct.display_id}</p>
+          ) : null}
+
             <div className="mt-2 flex items-center gap-2">
               {Number(currentProduct.stock_quantity ?? 0) <= 0 ? (
                 <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">Out of stock</span>
@@ -408,12 +408,6 @@ export default function ProductDetails({
                   {currentProduct.description || "No description available."}
                 </p>
 
-                {currentProduct.display_id ? (
-                  <p className="mt-2 text-xs font-medium uppercase tracking-wide text-slate-500">
-                    SKU: {currentProduct.display_id}
-                  </p>
-                ) : null}
-
                 {productAttributes.length > 0 ? (
                   <div className="mt-4 overflow-hidden rounded-md border border-slate-200">
                     <table className="w-full border-collapse text-sm">
@@ -449,6 +443,9 @@ export default function ProductDetails({
                   <span className="font-medium text-gray-900 dark:text-white">Email:</span> {currentProduct?.shop?.email || "N/A"}
                 </p>
                 <p>
+                  <span className="font-medium text-gray-900 dark:text-white">City:</span> {currentProduct?.shop?.city || "N/A"}
+                </p>
+                <p>
                   <span className="font-medium text-gray-900 dark:text-white">Address:</span> {currentProduct?.shop?.address || "N/A"}
                 </p>
                 {currentProduct?.shop?.website_url && (
@@ -463,25 +460,85 @@ export default function ProductDetails({
       </section>
 
       <div className="space-y-8 pb-8">
-        <Ribbon
-          title="Color Variants"
-          action={<a href="/featured" className="text-sm text-rose-600 hover:underline">View more</a>}
-          items={variants}
-          renderItem={(item: Product) => <ProductCard product={item} size="compact" />}
-        />
+        {currentProduct?.product_group_id ? (
+          <Ribbon
+            title="Color Variants"
+            action={
+              <Link
+                href={`/sarees?product_group_id=${encodeURIComponent(String(currentProduct.product_group_id))}`}
+                className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100"
+              >
+                View all
+              </Link>
+            }
+            items={variants}
+            renderItem={(item: Product) => (
+              <div className="w-[12.5rem] min-w-0 flex-shrink-0">
+                <ProductCard product={item} size="default" />
+              </div>
+            )}
+          />
+        ) : null}
 
         <Ribbon
           title="Similar From This Shop"
-          action={<a href="/shops" className="text-sm text-rose-600 hover:underline">View shop</a>}
+          action={
+            currentProduct?.shop?.display_id || currentProduct?.shop_display_id ? (
+              <Link
+                href={`/sarees?${(() => {
+                  const params = new URLSearchParams();
+                  params.append("shop_display_id", String(currentProduct?.shop?.display_id || currentProduct?.shop_display_id));
+                  const attributes = Array.isArray(currentProduct?.attributes) ? currentProduct.attributes : [];
+                  for (const attr of attributes) {
+                    if (attr?.name && attr?.value) {
+                      params.append("attribute_filters", `${String(attr.name).trim()}:${String(attr.value).trim()}`);
+                    }
+                  }
+                  return params.toString();
+                })()}`}
+                className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100"
+              >
+                View all
+              </Link>
+            ) : (
+              <span className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-slate-400 shadow-sm">
+                View all
+              </span>
+            )
+          }
           items={similarFromShop}
-          renderItem={(item: Product) => <ProductCard product={item} size="compact" hideShop={true} />}
+          renderItem={(item: Product) => (
+            <div className="w-[12.5rem] min-w-0 flex-shrink-0">
+              <ProductCard product={item} size="default" hideShop={true} />
+            </div>
+          )}
         />
 
         <Ribbon
           title="Similar From Other Shops"
-          action={<a href="/sarees" className="text-sm text-rose-600 hover:underline">Browse all</a>}
+          action={
+            <Link
+              href={`/sarees?${(() => {
+                const params = new URLSearchParams();
+                const attributes = Array.isArray(currentProduct?.attributes) ? currentProduct.attributes : [];
+                for (const attr of attributes) {
+                  if (attr?.name && attr?.value) {
+                    params.append("attribute_filters", `${String(attr.name).trim()}:${String(attr.value).trim()}`);
+                  }
+                }
+                return params.toString();
+              })()}`}
+              className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100"
+            >
+              View all
+            </Link>
+          }
           items={similarFromOtherShops}
-          renderItem={(item: Product) => <ProductCard product={item} size="compact" />}
+          renderItem={(item: Product) => (
+            <div className="w-[12.5rem] min-w-0 flex-shrink-0">
+              <ProductCard product={item} size="default" />
+            </div>
+          )}
         />
       </div>
 
