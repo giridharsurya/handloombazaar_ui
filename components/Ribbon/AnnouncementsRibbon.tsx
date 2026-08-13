@@ -5,20 +5,18 @@ import Ribbon from "@/components/Ribbon/Ribbon";
 import Link from "next/link";
 import type { AnnouncementBanner } from "@/types/apiTypes";
 
-type Ann = Pick<AnnouncementBanner, "id" | "title" | "subtitle" | "background_color" | "text_color" | "target" | "collection_id">;
-
 export default function AnnouncementsRibbon({
-  items = [] as Ann[],
+  items = [],
   onItemClick,
 }: {
-  items?: Ann[];
-  onItemClick?: (item: Ann) => void;
+  items?: AnnouncementBanner[];
+  onItemClick?: (item: AnnouncementBanner) => void;
 }) {
   return (
     <Ribbon
       // className="px-4"
       items={items}
-      renderItem={(it: Ann) => (
+      renderItem={(it: AnnouncementBanner) => (
         <div className="announcement-item flex-shrink-0" style={{ width: 'calc(50% - 0.5rem)' }}>
           {onItemClick ? (
             <button

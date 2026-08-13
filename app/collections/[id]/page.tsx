@@ -19,7 +19,7 @@ function SystemCollectionProductsInner() {
   const { isVariantMode, mainProductId, variantProductIds } = useVariantSelection();
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const itemsPerPage = 20;
   const [collection, setCollection] = useState<Collection | null>(null);
   const [pageProducts, setPageProducts] = useState<ProductListItem[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);

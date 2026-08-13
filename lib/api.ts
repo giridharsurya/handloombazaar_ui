@@ -39,7 +39,15 @@ import {
 } from "../types/apiTypes";
 
 const pendingProductPageRequests = new Map<string, Promise<ProductsResponseData>>();
+const pendingShopStatusRequests = new Map<string, Promise<ShopStatusResponse>>();
 const pendingShopDetailRequests = new Map<string, Promise<ShopDetail>>();
+const pendingCollectionsRequests = new Map<string, Promise<ListCollectionsResponse>>();
+const pendingFilterAttributeRequests = new Map<string, Promise<ProductFilterAttribute[]>>();
+const pendingHomepageVisitRequests = new Map<string, Promise<{ success: boolean; message: string; entity_type: string; entity_id: number }>>();
+const pendingShopsListRequests = new Map<string, Promise<ListShopsResponse>>();
+const pendingAnnouncementsListRequests = new Map<string, Promise<AnnouncementBanner[]>>();
+
+export const DEFAULT_PRODUCT_PAGE_SIZE = 20;
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:8000";
 import { apiFetch } from "./apiClient";
@@ -76,9 +84,23 @@ async function parseError(response: Response) {
 export const api = {
   analytics: {
     async trackHomepageVisit(): Promise<{ success: boolean; message: string; entity_type: string; entity_id: number }> {
-      const res = await apiFetch(`/api/analytics/homepage/visit`, { method: "POST", requiresAuth: false });
-      if (!res.ok) throw new Error(await parseError(res));
-      return res.json();
+      const cacheKey = "/api/analytics/homepage/visit";
+      if (pendingHomepageVisitRequests.has(cacheKey)) {
+        return pendingHomepageVisitRequests.get(cacheKey)!;
+      }
+
+      const requestPromise = (async () => {
+        try {
+          const res = await apiFetch(cacheKey, { method: "POST", requiresAuth: false });
+          if (!res.ok) throw new Error(await parseError(res));
+          return res.json();
+        } finally {
+          pendingHomepageVisitRequests.delete(cacheKey);
+        }
+      })();
+
+      pendingHomepageVisitRequests.set(cacheKey, requestPromise);
+      return requestPromise;
     },
 
     async getShopAnalytics(
@@ -93,6 +115,24 @@ export const api = {
       if (options.toDate) params.set("to_date", options.toDate);
 
       const res = await apiFetch(`/api/analytics/shop/${encodeURIComponent(displayId)}?${params.toString()}`, {
+        requiresAuth: true,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async getAdminAnalytics(
+      period: "all" | "week" | "month" | "quarter" | "halfyear" | "year" | "custom" = "all",
+      options: { month?: string; year?: string; fromDate?: string; toDate?: string; shopDisplayId?: string } = {},
+    ) {
+      const params = new URLSearchParams({ period });
+      if (options.month) params.set("month", options.month);
+      if (options.year) params.set("year", options.year);
+      if (options.fromDate) params.set("from_date", options.fromDate);
+      if (options.toDate) params.set("to_date", options.toDate);
+      if (options.shopDisplayId) params.set("shop_display_id", options.shopDisplayId);
+
+      const res = await apiFetch(`/api/analytics/admin?${params.toString()}`, {
         requiresAuth: true,
       });
       if (!res.ok) throw new Error(await parseError(res));
@@ -153,8 +193,9 @@ export const api = {
 
     async getProductsPage(params: ProductListQueryParams = {}): Promise<ProductsResponseData> {
       const { authenticated, attribute_filters, attribute_option_ids, track_shop_view, ...query } = params;
+      const normalizedQuery = { ...query, page_size: query.page_size ?? DEFAULT_PRODUCT_PAGE_SIZE };
       const qs = new URLSearchParams();
-      Object.entries(query).forEach(([k, v]) => {
+      Object.entries(normalizedQuery).forEach(([k, v]) => {
         if (v !== undefined && v !== null) qs.append(k, String(v));
       });
       if (attribute_filters && attribute_filters.length) {
@@ -193,9 +234,23 @@ export const api = {
     },
 
     async getFilterAttributes(): Promise<ProductFilterAttribute[]> {
-      const res = await apiFetch(`/api/products/filters/attributes`, { requiresAuth: false });
-      if (!res.ok) throw new Error(await parseError(res));
-      return res.json();
+      const cacheKey = "/api/products/filters/attributes";
+      if (pendingFilterAttributeRequests.has(cacheKey)) {
+        return pendingFilterAttributeRequests.get(cacheKey)!;
+      }
+
+      const requestPromise = (async () => {
+        try {
+          const res = await apiFetch(cacheKey, { requiresAuth: false });
+          if (!res.ok) throw new Error(await parseError(res));
+          return res.json();
+        } finally {
+          pendingFilterAttributeRequests.delete(cacheKey);
+        }
+      })();
+
+      pendingFilterAttributeRequests.set(cacheKey, requestPromise);
+      return requestPromise;
     },
 
     async getEditableAttributes({ authenticated = false }: { authenticated?: boolean } = {}): Promise<ProductFilterAttribute[]> {
@@ -272,9 +327,23 @@ export const api = {
 
   shops: {
     async getStatus(request: GetShopStatusRequest): Promise<ShopStatusResponse> {
-      const res = await apiFetch(`/api/shops/${encodeURIComponent(request.display_id)}/status`, { requiresAuth: false });
-      if (!res.ok) throw new Error(await parseError(res));
-      return res.json();
+      const cacheKey = `/api/shops/${encodeURIComponent(request.display_id)}/status`;
+      if (pendingShopStatusRequests.has(cacheKey)) {
+        return pendingShopStatusRequests.get(cacheKey)!;
+      }
+
+      const requestPromise = (async () => {
+        try {
+          const res = await apiFetch(cacheKey, { requiresAuth: false });
+          if (!res.ok) throw new Error(await parseError(res));
+          return res.json();
+        } finally {
+          pendingShopStatusRequests.delete(cacheKey);
+        }
+      })();
+
+      pendingShopStatusRequests.set(cacheKey, requestPromise);
+      return requestPromise;
     },
     async getDetail(request: GetShopDetailRequest): Promise<ShopDetail> {
       const cacheKey = `/api/shops/${encodeURIComponent(request.display_id)}`;
@@ -302,10 +371,25 @@ export const api = {
       if (params.page_size !== undefined) qs.append("page_size", String(params.page_size));
       if (params.view_count) qs.append("view_count", "true");
       const path = qs.toString() ? `/api/shops?${qs.toString()}` : `/api/shops`;
-      const res = await apiFetch(path, { requiresAuth: false });
-      if (!res.ok) throw new Error(await parseError(res));
-      const data = await res.json();
-      return Array.isArray(data.items) ? data.items : data;
+
+      const cacheKey = `${path}`;
+      if (pendingShopsListRequests.has(cacheKey)) {
+        return pendingShopsListRequests.get(cacheKey)!;
+      }
+
+      const requestPromise = (async () => {
+        try {
+          const res = await apiFetch(path, { requiresAuth: false });
+          if (!res.ok) throw new Error(await parseError(res));
+          const data = await res.json();
+          return Array.isArray(data.items) ? data.items : data;
+        } finally {
+          pendingShopsListRequests.delete(cacheKey);
+        }
+      })();
+
+      pendingShopsListRequests.set(cacheKey, requestPromise);
+      return requestPromise;
     },
     async listPage(params: { sort_by?: "newest" | "most-viewed" | "product-count"; page?: number; page_size?: number; view_count?: boolean } = {}): Promise<PaginatedShopsResponse> {
       const qs = new URLSearchParams();
@@ -319,9 +403,23 @@ export const api = {
       return res.json();
     },
     async getManageDetail(request: GetShopDetailRequest): Promise<ShopDetail> {
-      const res = await apiFetch(`/api/shops/${encodeURIComponent(request.display_id)}/manage`, { requiresAuth: true });
-      if (!res.ok) throw new Error(await parseError(res));
-      return res.json();
+      const cacheKey = `/api/shops/${encodeURIComponent(request.display_id)}/manage`;
+      if (pendingShopDetailRequests.has(cacheKey)) {
+        return pendingShopDetailRequests.get(cacheKey)!;
+      }
+
+      const requestPromise = (async () => {
+        try {
+          const res = await apiFetch(cacheKey, { requiresAuth: true });
+          if (!res.ok) throw new Error(await parseError(res));
+          return res.json();
+        } finally {
+          pendingShopDetailRequests.delete(cacheKey);
+        }
+      })();
+
+      pendingShopDetailRequests.set(cacheKey, requestPromise);
+      return requestPromise;
     },
     async update(displayId: string, payload: ShopUpdatePayload): Promise<ShopDetail> {
       const res = await apiFetch(`/api/shops/${encodeURIComponent(displayId)}`, {
@@ -457,7 +555,7 @@ export const api = {
       return res;
     },
 
-    async shopDecision(shopId: number, action: "approve" | "reject") {
+    async shopDecision(shopId: number, action: "approve" | "reject" | "deactivate" | "reactivate") {
       const res = await apiFetch(`/api/admin/shops/${shopId}/${action}`, {
         method: "POST",
         requiresAuth: true,
@@ -478,10 +576,24 @@ export const api = {
       if (page_size !== undefined) qs.append("page_size", String(page_size));
       if (view_count) qs.append("view_count", "true");
 
-      const res = await apiFetch(`/api/collections?${qs.toString()}`, { requiresAuth: !!authenticated });
-      if (!res.ok) throw new Error(await parseError(res));
-      const data = await res.json();
-      return Array.isArray(data.items) ? data.items : data;
+      const cacheKey = `/api/collections?${qs.toString()}|auth=${!!authenticated}`;
+      if (pendingCollectionsRequests.has(cacheKey)) {
+        return pendingCollectionsRequests.get(cacheKey)!;
+      }
+
+      const requestPromise = (async () => {
+        try {
+          const res = await apiFetch(`/api/collections?${qs.toString()}`, { requiresAuth: !!authenticated });
+          if (!res.ok) throw new Error(await parseError(res));
+          const data = await res.json();
+          return Array.isArray(data.items) ? data.items : data;
+        } finally {
+          pendingCollectionsRequests.delete(cacheKey);
+        }
+      })();
+
+      pendingCollectionsRequests.set(cacheKey, requestPromise);
+      return requestPromise;
     },
     async listPage(params: { kind?: "system" | "shop"; shop_display_id?: string; sort_by?: "newest" | "most-viewed" | "product-count"; page?: number; page_size?: number; view_count?: boolean; authenticated?: boolean } = {}): Promise<PaginatedCollectionsResponse> {
       const { authenticated, shop_display_id, kind, sort_by, page, page_size, view_count } = params;
@@ -511,8 +623,9 @@ export const api = {
 
     async getProductsPage(collectionId: number, params: CollectionProductsQueryParams = {}): Promise<ProductsResponseData> {
       const { authenticated, attribute_option_ids, track_view, ...query } = params;
+      const normalizedQuery = { ...query, page_size: query.page_size ?? DEFAULT_PRODUCT_PAGE_SIZE };
       const qs = new URLSearchParams();
-      Object.entries(query).forEach(([k, v]) => {
+      Object.entries(normalizedQuery).forEach(([k, v]) => {
         if (v !== undefined && v !== null) qs.append(k, String(v));
       });
       if (attribute_option_ids && attribute_option_ids.length) {
@@ -635,10 +748,25 @@ export const api = {
       if (typeof params.include_inactive === "boolean") qs.append("include_inactive", String(params.include_inactive));
       if (typeof params.include_hidden === "boolean") qs.append("include_hidden", String(params.include_hidden));
 
-      const res = await apiFetch(`/api/announcements?${qs.toString()}`, { requiresAuth: false });
-      if (!res.ok) throw new Error(await parseError(res));
-      const data = await res.json();
-      return Array.isArray(data.items) ? data.items : [];
+      const path = `/api/announcements?${qs.toString()}`;
+      const cacheKey = path;
+      if (pendingAnnouncementsListRequests.has(cacheKey)) {
+        return pendingAnnouncementsListRequests.get(cacheKey)!;
+      }
+
+      const requestPromise = (async () => {
+        try {
+          const res = await apiFetch(path, { requiresAuth: false });
+          if (!res.ok) throw new Error(await parseError(res));
+          const data = await res.json();
+          return Array.isArray(data.items) ? data.items : [];
+        } finally {
+          pendingAnnouncementsListRequests.delete(cacheKey);
+        }
+      })();
+
+      pendingAnnouncementsListRequests.set(cacheKey, requestPromise);
+      return requestPromise;
     },
 
     async getByCollection(collectionId: number, params: { shop_display_id?: string } = {}): Promise<AnnouncementBanner | null> {

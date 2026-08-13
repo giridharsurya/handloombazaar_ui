@@ -46,7 +46,7 @@ export default function VendorPage() {
         const productsData = await api.products.getProducts({
           shop_display_id: shopDisplayId,
           page: 1,
-          page_size: 5,
+          page_size: 20,
           authenticated: true,
         });
         setProducts(productsData);

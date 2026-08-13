@@ -4,19 +4,17 @@ import React, { useEffect, useRef, useState } from "react";
 // Fetch shops from backend
 import api from "@/lib/api";
 import ShopProductsRibbon from "@/components/Ribbon/ShopProductsRibbon";
-import ShopsFilter, { FilterState } from "@/components/Filters/ShopsFilter";
 import FilterHeader from "@/components/FilterHeader/FilterHeader";
 import Pagination from "@/components/Product/Pagination";
-import type { ShopStatusResponse } from "@/types/apiTypes";
+import type { PaginatedShopsResponse, ProductListItem, ShopStatusResponse } from "@/types/apiTypes";
+
+const pendingShopsRequests = new Map<string, Promise<PaginatedShopsResponse>>();
+const pendingShopProductsRequests = new Map<string, Promise<ProductListItem[]>>();
 
 export default function ShopsPage() {
-  const [filters, setFilters] = useState<FilterState>({
-    priceRange: [0, 100000],
-    selectedTypes: [],
-  });
   const [sortBy, setSortBy] = useState<"newest" | "most-viewed" | "product-count">("newest");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const itemsPerPage = 20;
 
   const handleSortChange = (sort: "price-low" | "price-high" | "newest" | "most-viewed" | "product-count") => {
     if (sort === "newest" || sort === "most-viewed" || sort === "product-count") {
@@ -25,101 +23,90 @@ export default function ShopsPage() {
     }
   };
 
-  const [showFilters, setShowFilters] = useState(true);
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
-  const sidebarRef = useRef<HTMLElement | null>(null);
 
   const [shops, setShops] = useState<ShopStatusResponse[]>([]);
   const [totalShops, setTotalShops] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [productsMap, setProductsMap] = useState<Record<string, any[]>>({});
+  const [productsMap, setProductsMap] = useState<Record<string, ProductListItem[]>>({});
 
   useEffect(() => {
-    const getStickyTop = () => {
-      const rootStyles = getComputedStyle(document.documentElement);
-      const appHeaderHeight =
-        Number.parseFloat(rootStyles.getPropertyValue("--app-header-height")) || 120;
-      const filterHeaderHeight =
-        Number.parseFloat(rootStyles.getPropertyValue("--filter-header-height")) || 72;
-      return appHeaderHeight + filterHeaderHeight;
-    };
-
-    const updateHeaderSticky = () => {
-      if (!showFilters || !sidebarRef.current) {
-        setIsHeaderSticky(true);
-        return;
-      }
-
-      const stickyTop = getStickyTop();
-      const sidebarTop = sidebarRef.current.getBoundingClientRect().top;
-      setIsHeaderSticky(sidebarTop >= stickyTop - 1);
-    };
-
-    updateHeaderSticky();
-    window.addEventListener("scroll", updateHeaderSticky, { passive: true });
-    window.addEventListener("resize", updateHeaderSticky);
-
-    return () => {
-      window.removeEventListener("scroll", updateHeaderSticky);
-      window.removeEventListener("resize", updateHeaderSticky);
-    };
-  }, [showFilters]);
+    setIsHeaderSticky(true);
+  }, []);
 
   useEffect(() => {
-    let mounted = true;
-    const load = async () => {
+    const requestKey = `${sortBy}:${currentPage}:${itemsPerPage}`;
+    if (pendingShopsRequests.has(requestKey)) {
+      return;
+    }
+
+    const requestPromise = (async () => {
       setLoading(true);
       setProductsMap({});
       try {
         const data = await api.shops.listPage({ sort_by: sortBy, view_count: true, page: currentPage, page_size: itemsPerPage });
-        if (!mounted) return;
         setShops(data.items || []);
         setTotalShops(data.total_count || 0);
+        return data;
       } catch (e) {
         console.error("Failed to load shops", e);
-        if (!mounted) return;
         setShops([]);
         setTotalShops(0);
+        return { items: [], page: currentPage, page_size: itemsPerPage, total_count: 0, has_next: false } as PaginatedShopsResponse;
       } finally {
-        if (mounted) setLoading(false);
+        setLoading(false);
       }
-    };
-    load();
-    return () => {
-      mounted = false;
-    };
-  }, [sortBy, currentPage]);
+    })();
+
+    pendingShopsRequests.set(requestKey, requestPromise);
+    requestPromise.finally(() => {
+      pendingShopsRequests.delete(requestKey);
+    });
+  }, [sortBy, currentPage, itemsPerPage]);
 
   // When shops load, fetch a small set of products for each shop to display in the section
   React.useEffect(() => {
     if (!shops || shops.length === 0) return;
+
     let mounted = true;
     const loadProducts = async () => {
       try {
         const entries = await Promise.all(
-          shops.map(async (s) => {
-            try {
-              const items = await api.products.getProducts({ shop_display_id: s.display_id, page: 1, page_size: 6 });
-              return [s.display_id, items as any[]] as const;
-            } catch (e) {
-              console.error("Failed to load products for shop", s.display_id, e);
-              return [s.display_id, [] as any[]] as const;
+          shops.map(async (shop) => {
+            const productRequestKey = shop.display_id;
+            const existingPromise = pendingShopProductsRequests.get(productRequestKey);
+            const requestPromise = existingPromise ?? (async () => {
+              try {
+                return await api.products.getProducts({ shop_display_id: shop.display_id, page: 1, page_size: 20 });
+              } catch (e) {
+                console.error("Failed to load products for shop", shop.display_id, e);
+                return [] as ProductListItem[];
+              }
+            })();
+
+            if (!existingPromise) {
+              pendingShopProductsRequests.set(productRequestKey, requestPromise);
             }
+
+            const items = await requestPromise;
+            return [shop.display_id, items] as const;
           }),
         );
+
         if (!mounted) return;
-        const map: Record<string, any[]> = {};
-        for (const tuple of entries) {
-          const k = tuple[0];
-          const v = tuple[1] as any[];
-          map[k] = v;
+
+        const map: Record<string, ProductListItem[]> = {};
+        for (const [key, items] of entries) {
+          map[key] = items;
         }
         setProductsMap(map);
       } catch (e) {
         console.error("Failed to load shop products", e);
       }
     };
+
     loadProducts();
+
     return () => {
       mounted = false;
     };
@@ -127,7 +114,6 @@ export default function ShopsPage() {
 
   // For now apply no advanced filters; just use the fetched shop list
   const filteredShops = shops;
-  const hasProductInRange = false;
     
   
 
@@ -137,9 +123,7 @@ export default function ShopsPage() {
         <FilterHeader
           pageTitle="Shops"
           productCount={totalShops}
-          showFiltersToggle={true}
-          onToggleFilters={() => setShowFilters(!showFilters)}
-          filtersOpen={showFilters}
+          showFiltersToggle={false}
           sortBy={sortBy}
           onSortChange={handleSortChange}
           isSticky={isHeaderSticky}
@@ -151,38 +135,24 @@ export default function ShopsPage() {
         />
 
         <div className="px-4 py-4">
-          <div className="flex gap-6 items-start">
-            {showFilters && (
-              <aside
-                ref={sidebarRef}
-                className="w-64 shrink-0 sticky self-start"
-                style={{
-                  top: "calc(var(--app-header-height, 120px) + var(--filter-header-height, 72px))",
-                }}
-              >
-                <ShopsFilter onFilterChange={setFilters} />
-              </aside>
+          <section className="flex-1 min-w-0">
+            {loading ? (
+              <div className="py-12 text-center">
+                <p className="text-slate-600">Loading shops…</p>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {filteredShops.map((shop) => (
+                  <ShopProductsRibbon
+                    key={shop.display_id}
+                    shop={shop}
+                    products={productsMap?.[shop.display_id] || []}
+                  />
+                ))}
+              </div>
             )}
-
-            <section className="flex-1 min-w-0">
-                {loading ? (
-                <div className="py-12 text-center">
-                  <p className="text-slate-600">Loading shops…</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {filteredShops.map((shop) => (
-                    <ShopProductsRibbon
-                      key={shop.display_id}
-                      shop={shop}
-                      products={productsMap?.[shop.display_id] || []}
-                    />
-                  ))}
-                </div>
-              )}
-              <Pagination currentPage={currentPage} totalItems={totalShops} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
-            </section>
-          </div>
+            <Pagination currentPage={currentPage} totalItems={totalShops} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
+          </section>
         </div>
       </section>
 

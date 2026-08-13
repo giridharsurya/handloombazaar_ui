@@ -51,6 +51,12 @@ const adminSections = [
     cta: "Open System Collections",
   },
   {
+    title: "Analytics",
+    description: "Review site-wide visits, system collections, shop activity, and per-shop analytics.",
+    href: "/admin/analytics",
+    cta: "Open Analytics",
+  },
+  {
     title: "All Products Manager",
     description: "View and manage all products across all shops. Perform bulk actions on selected products.",
     href: "/admin/products",

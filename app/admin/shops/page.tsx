@@ -119,13 +119,21 @@ export default function AdminShopsPage() {
     loadSelectedShop();
   }, [selectedShopDisplayId, api.shops]);
 
-  const handleShopDecision = async (shopId: number, action: "approve" | "reject") => {
+  const handleShopDecision = async (shopId: number, action: "approve" | "reject" | "deactivate" | "reactivate") => {
     setShopsFeedback("");
 
     try {
       await api.admin.shopDecision(shopId, action);
       await loadShopsData();
-      setShopsFeedback(action === "approve" ? "Shop approved successfully." : "Shop rejected successfully.");
+      const friendlyMessage =
+        action === "approve"
+          ? "Shop approved successfully."
+          : action === "reject"
+            ? "Shop rejected successfully."
+            : action === "deactivate"
+              ? "Shop deactivated successfully and all related products and collections were disabled."
+              : "Shop reactivated successfully and all related products and collections were restored.";
+      setShopsFeedback(friendlyMessage);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to update shop status";
       setShopsFeedback(message);
@@ -272,6 +280,46 @@ export default function AdminShopsPage() {
                             className="rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-500"
                           >
                             Reject
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+
+          {shops.length > 0 ? (
+            <div className="mt-6 overflow-x-auto">
+              <table className="min-w-full border-collapse text-left text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-slate-600">
+                    <th className="px-3 py-2 font-medium">Shop</th>
+                    <th className="px-3 py-2 font-medium">Status</th>
+                    <th className="px-3 py-2 font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shops.map((row) => (
+                    <tr key={row.id} className="border-b border-slate-100">
+                      <td className="px-3 py-3">
+                        <div className="font-medium">{row.name}</div>
+                        <div className="text-xs text-slate-500">{row.display_id}</div>
+                      </td>
+                      <td className="px-3 py-3">
+                        <span className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${row.is_active ? "bg-emerald-100 text-emerald-700" : "bg-slate-200 text-slate-700"}`}>
+                          {row.is_active ? "Active" : "Inactive"}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3">
+                        <div className="flex flex-wrap gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleShopDecision(row.id, row.is_active ? "deactivate" : "reactivate")}
+                            className={`rounded-md px-3 py-1.5 text-xs font-semibold text-white ${row.is_active ? "bg-amber-600 hover:bg-amber-500" : "bg-emerald-600 hover:bg-emerald-500"}`}
+                          >
+                            {row.is_active ? "Deactivate" : "Reactivate"}
                           </button>
                         </div>
                       </td>

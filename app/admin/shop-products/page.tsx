@@ -52,7 +52,8 @@ export default function AdminShopProductsPage() {
         const rows = await api.admin.getShops();
         if (cancelled) return;
 
-        const normalized = (rows || []).map((s: any) => ({
+        const activeRows = (rows || []).filter((s: any) => s.is_active !== false);
+        const normalized = activeRows.map((s: any) => ({
           id: s.id,
           name: s.name,
           display_id: s.display_id,
@@ -63,7 +64,7 @@ export default function AdminShopProductsPage() {
         setShops(normalized);
 
         setSelectedShopDisplayId((prev) => {
-          if (prev) return prev;
+          if (prev && normalized.some((s) => s.display_id === prev)) return prev;
           const first = normalized.find((s) => !!s.display_id);
           return first?.display_id || "";
         });
@@ -101,7 +102,7 @@ export default function AdminShopProductsPage() {
           api.products.getProducts({
             shop_display_id: selectedShopDisplayId,
             page: 1,
-            page_size: 5,
+            page_size: 20,
             authenticated: true,
           }),
           api.shops.getDetail({ display_id: selectedShopDisplayId }),
@@ -163,7 +164,7 @@ export default function AdminShopProductsPage() {
             >
               <option value="">Select shop</option>
               {shops
-                .filter((s) => !!s.display_id)
+                .filter((s) => !!s.display_id && s.is_active !== false)
                 .map((s) => (
                   <option key={s.id} value={s.display_id}>
                     {s.name} ({s.display_id})

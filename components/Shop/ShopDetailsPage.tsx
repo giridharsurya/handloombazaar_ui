@@ -89,7 +89,7 @@ async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: stri
           const pageData = await api.collections.getProductsPage(collectionItem.id, {
             authenticated: isManagedScope,
             page: 1,
-            page_size: 100,
+            page_size: 20,
             shop_display_id: collectionItem.source === "system" ? shopId : undefined,
           });
           const items = (pageData?.items || []) as ProductListItem[];
@@ -178,7 +178,7 @@ async function fetchFilterAttributes(api: ReturnType<typeof useApi>) {
 export default function ShopDetailsPage({ shop, products, scope, actionsSidebar }: ShopDetailsPageProps) {
   const [displayProducts, setDisplayProducts] = useState<ProductListItem[]>(products);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 20;
   const [activeTab, setActiveTab] = useState<"overview" | "products" | "collections" | "about">("overview");
   const [selectedCollectionKey, setSelectedCollectionKey] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({

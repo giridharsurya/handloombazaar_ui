@@ -21,7 +21,7 @@ export default function SareesPageContent() {
   const announcementTitleParam = searchParams.get("announcement_title");
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 20;
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 25000],
     selectedAttributeOptionIds: {},

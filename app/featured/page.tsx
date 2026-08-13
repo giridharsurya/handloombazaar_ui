@@ -11,7 +11,7 @@ import { useApi } from "@/lib/ApiProvider";
 
 export default function FeaturedPage() {
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 20;
 
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 25000],
@@ -23,6 +23,7 @@ export default function FeaturedPage() {
   const handleSortChange = (sort: "price-low" | "price-high" | "newest" | "most-viewed" | "product-count") => {
     if (sort === "product-count") return;
     setSortBy(sort);
+    setCurrentPage(1);
   };
   const [pageProducts, setPageProducts] = useState<ProductListItem[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
@@ -148,13 +149,9 @@ export default function FeaturedPage() {
     };
   }, [api]);
 
-  // Reset to page 1 when filters or sort order change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [filters, sortBy]);
-
   const handleFilterChange = (nextFilters: FilterState) => {
     setFilters(nextFilters);
+    setCurrentPage(1);
   };
 
   return (

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import ProductGrid from "@/components/Product/ProductGrid";
 import ShopRibbon from "@/components/Ribbon/ShopRibbon";
 import Ribbon from "@/components/Ribbon/Ribbon";
@@ -23,6 +23,7 @@ type HomepageRibbonRow = {
 };
 
 export default function Home() {
+  const pathname = usePathname();
   const router = useRouter();
   const [shops, setShops] = useState<HomeShopItem[]>([]);
   const [announcements, setAnnouncements] = useState<AnnouncementBanner[]>([]);
@@ -37,51 +38,23 @@ export default function Home() {
         url.searchParams.set("announcement_title", item.title);
       }
       router.push(`${url.pathname}${url.search}${url.hash}`);
-    } catch (error) {
+    } catch {
       router.push(target);
     }
   };
 
-  async function loadHomepageCollections() {
-    try {
-      const collections = (await api.collections.list({ kind: "system", display_on_homepage: true, authenticated: false })) as Collection[];
-      const rows = await Promise.all(
-        collections.map(async (collection) => {
-          try {
-            const pageData = await api.collections.getProductsPage(collection.id, {
-              authenticated: false,
-              page: 1,
-              page_size: 12,
-            });
-            return {
-              collection,
-              items: (pageData.items || []).filter((item) => item.is_active !== false),
-            };
-          } catch (error) {
-            console.error("Failed to load products for collection", collection.id, error);
-            return { collection, items: [] };
-          }
-        })
-      );
-      setHomepageRibbonRows(rows || []);
-    } catch (error) {
-      console.error("Failed to load homepage collections", error);
-      setHomepageRibbonRows([]);
-    }
-  }
-
   useEffect(() => {
+    if (pathname !== "/") return;
+
     let mounted = true;
 
-    const trackHomepageVisit = async () => {
+    void (async () => {
       try {
         await api.analytics.trackHomepageVisit();
       } catch (error) {
         console.error("Failed to track homepage visit", error);
       }
-    };
 
-    const loadShops = async () => {
       try {
         const rows = await api.shops.list();
         if (!mounted) return;
@@ -95,9 +68,7 @@ export default function Home() {
       } catch (error) {
         console.error("Failed to load shops", error);
       }
-    };
 
-    const loadAnnouncements = async () => {
       try {
         const rows = await api.announcements.list();
         if (!mounted) return;
@@ -105,28 +76,48 @@ export default function Home() {
       } catch (error) {
         console.error("Failed to load announcements", error);
       }
-    };
 
-    const loadLatestProducts = async () => {
       try {
-        const pageData = await api.products.getProductsPage({ page: 1, page_size: 8 });
+        const collections = (await api.collections.list({ kind: "system", display_on_homepage: true, authenticated: false })) as Collection[];
+        const rows = await Promise.all(
+          collections.map(async (collection) => {
+            try {
+              const pageData = await api.collections.getProductsPage(collection.id, {
+                authenticated: false,
+                page: 1,
+                page_size: 20,
+              });
+              return {
+                collection,
+                items: (pageData.items || []).filter((item) => item.is_active !== false),
+              };
+            } catch {
+              console.error("Failed to load products for collection", collection.id);
+              return { collection, items: [] };
+            }
+          })
+        );
+        if (!mounted) return;
+        setHomepageRibbonRows(rows || []);
+      } catch (error) {
+        console.error("Failed to load homepage collections", error);
+        if (!mounted) return;
+        setHomepageRibbonRows([]);
+      }
+
+      try {
+        const pageData = await api.products.getProductsPage({ page: 1, page_size: 20 });
         if (!mounted) return;
         setLatestProducts(pageData.items || []);
       } catch (error) {
         console.error("Failed to load latest products", error);
       }
-    };
-
-    trackHomepageVisit();
-    loadShops();
-    loadAnnouncements();
-    loadHomepageCollections();
-    loadLatestProducts();
+    })();
 
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [pathname]);
 
   return (
     <main className="min-h-screen w-full bg-white dark:bg-gray-950">

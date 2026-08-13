@@ -29,7 +29,7 @@ export default function ShopPage() {
       setError(null);
       try {
         const shopData = await api.shops.getDetail({ display_id: displayId });
-        const productData = await api.products.getProducts({ page: 1, page_size: 5, shop_display_id: displayId });
+        const productData = await api.products.getProducts({ page: 1, page_size: 20, shop_display_id: displayId });
         if (!mounted) return;
         setShop(shopData);
         setProducts(productData);

@@ -28,7 +28,7 @@ export default function AdminSystemCollectionsPage() {
   const [sortBy, setSortBy] = useState<"newest" | "most-viewed" | "product-count">("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCollections, setTotalCollections] = useState(0);
-  const itemsPerPage = 8;
+  const itemsPerPage = 20;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 

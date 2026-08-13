@@ -150,6 +150,21 @@ export type ShopAnalyticsResponse = {
   top_collections: ShopAnalyticsTopItem[];
 };
 
+export type AdminAnalyticsSummary = {
+  site_visitor_count: number;
+  system_collection_views: number;
+  shop_views: number;
+  total_shops: number;
+  top_shops: ShopAnalyticsTopItem[];
+  top_system_collections: ShopAnalyticsTopItem[];
+};
+
+export type AdminAnalyticsResponse = {
+  period: string;
+  summary: AdminAnalyticsSummary;
+  selected_shop?: ShopAnalyticsResponse | null;
+};
+
 export type ProductFilterAttribute = {
   id: number;
   name: string;

@@ -38,7 +38,7 @@ function CollectionDetailsPage({
 }: CollectionDetailsPageProps) {
   const api = useApi();
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 20;
   const [pageProducts, setPageProducts] = useState<ProductListItem[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [loadingProducts, setLoadingProducts] = useState(true);

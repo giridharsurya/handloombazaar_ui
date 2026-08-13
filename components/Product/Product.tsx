@@ -35,6 +35,9 @@ export default function Product({ product, size = "default", hideShop = false, h
   const hasValidBasePrice = Number.isFinite(parsedBasePrice);
   const parsedDiscountPrice = Number(discountPrice);
   const hasValidDiscountPrice = hasDiscountPrice && Number.isFinite(parsedDiscountPrice);
+  const discountPercentage = hasValidBasePrice && hasValidDiscountPrice && parsedBasePrice > 0
+    ? Math.round(((parsedBasePrice - parsedDiscountPrice) / parsedBasePrice) * 100)
+    : null;
   const rawStockQuantity = (product as any).stock_quantity;
   const hasStockQuantity = rawStockQuantity !== null && rawStockQuantity !== undefined && Number.isFinite(Number(rawStockQuantity));
   const stockQuantity = hasStockQuantity ? Number(rawStockQuantity) : null;
@@ -106,7 +109,7 @@ export default function Product({ product, size = "default", hideShop = false, h
         <div className={isCompact ? "p-2" : "p-4"}>
           {/* Shop Info */}
           {!hideShop && (
-            <div className={`flex items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700 ${isCompact ? "mb-2" : "mb-3"}`}>
+            <div className={`flex min-w-0 items-center gap-2 pb-2 border-b border-gray-200 dark:border-gray-700 ${isCompact ? "mb-2" : "mb-3"}`}>
               <div className={`relative rounded-full overflow-hidden flex-shrink-0 bg-gray-200 ${isCompact ? "w-6 h-6" : "w-8 h-8"}`}>
                 {product.shop_logo_url && !String(product.shop_logo_url).startsWith("blob:") ? (
                     <BackendImage src={product.shop_logo_url} alt={shopName} fill style={{ objectFit: "cover" }} />
@@ -114,7 +117,10 @@ export default function Product({ product, size = "default", hideShop = false, h
                   <div className="w-full h-full bg-gray-200" />
                 )}
               </div>
-              <span className={`font-semibold text-gray-700 dark:text-gray-300 ${isCompact ? "text-xs" : "text-xs"}`}>
+              <span
+                className={`min-w-0 flex-1 truncate overflow-hidden whitespace-nowrap font-semibold text-gray-700 dark:text-gray-300 ${isCompact ? "text-xs" : "text-xs"}`}
+                title={shopName}
+              >
                   {isCompact ? shopName.split(" ")[0] : shopName}
               </span>
             </div>
@@ -124,16 +130,23 @@ export default function Product({ product, size = "default", hideShop = false, h
               {productName}
             </h3>
 
-          <div className={`flex items-center ${isCompact ? "justify-between gap-1" : "justify-between"}`}>
-            <div className={`flex items-center ${isCompact ? "gap-1" : "gap-2"}`}>
+          <div className="flex flex-col gap-2">
+            <div className={`flex min-w-0 items-center ${isCompact ? "gap-1" : "gap-2"}`}>
               {hasValidBasePrice && hasValidDiscountPrice ? (
                 <>
                   <span className={`text-gray-500 line-through ${isCompact ? "text-[10px]" : "text-sm"}`}>
                     ₹{formatPrice(parsedBasePrice)}
                   </span>
-                  <span className={`font-bold text-rose-600 ${isCompact ? "text-xs" : "text-lg"}`}>
-                    ₹{formatPrice(parsedDiscountPrice)}
-                  </span>
+                  <div className="flex min-w-0 items-center gap-1">
+                    <span className={`font-bold text-rose-600 ${isCompact ? "text-xs" : "text-lg"}`}>
+                      ₹{formatPrice(parsedDiscountPrice)}
+                    </span>
+                    {discountPercentage !== null ? (
+                      <span className={`shrink-0 rounded bg-rose-100 px-1.5 py-0.5 font-semibold text-rose-700 ${isCompact ? "text-[9px]" : "text-[10px]"}`}>
+                        {discountPercentage}% off
+                      </span>
+                    ) : null}
+                  </div>
                 </>
               ) : hasValidBasePrice ? (
                 <span className={`font-bold text-rose-600 ${isCompact ? "text-xs" : "text-lg"}`}>
@@ -145,7 +158,7 @@ export default function Product({ product, size = "default", hideShop = false, h
                 </span>
               )}
             </div>
-            <span className={`text-rose-600 ${isCompact ? "text-xs" : "text-sm font-medium"}`}>
+            <span className={`w-full text-left text-rose-600 ${isCompact ? "text-xs" : "text-sm font-medium"}`}>
               {viewLabel}
             </span>
           </div>

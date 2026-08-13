@@ -23,7 +23,7 @@ function AllProductsPageInner() {
   const { isVariantMode, mainProductId, variantProductIds } = useVariantSelection();
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 20;
   const [pageProducts, setPageProducts] = useState<ProductListItem[]>([]);
   const [totalProducts, setTotalProducts] = useState(0);
   const [loading, setLoading] = useState(true);

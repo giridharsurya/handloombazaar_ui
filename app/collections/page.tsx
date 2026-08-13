@@ -27,7 +27,7 @@ export default function SystemCollectionsPage() {
   const [sortBy, setSortBy] = useState<"newest" | "most-viewed" | "product-count">("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalCollections, setTotalCollections] = useState(0);
-  const itemsPerPage = 8;
+  const itemsPerPage = 20;
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -64,7 +64,7 @@ export default function SystemCollectionsPage() {
               const pageData = await api.collections.getProductsPage(collection.id, {
                 authenticated: false,
                 page: 1,
-                page_size: 12,
+                page_size: 20,
               });
               const items = (pageData?.items || []) as ProductListItem[];
               const normalizedItems = items
@@ -103,10 +103,12 @@ export default function SystemCollectionsPage() {
   }, [collections, isAdmin]);
 
   const ribbonRows = useMemo<CollectionRibbonRow[]>(() => {
-    return visibleCollections.map((collection) => ({
-      collection,
-      items: collectionMembers[collection.id] || [],
-    }));
+    return visibleCollections
+      .map((collection) => ({
+        collection,
+        items: collectionMembers[collection.id] || [],
+      }))
+      .filter((row) => row.items.length > 0);
   }, [visibleCollections, collectionMembers]);
 
   return (
