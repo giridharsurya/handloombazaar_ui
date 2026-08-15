@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Suspense } from "react";
 import "./globals.css";
 import Header from "@/components/Header/Header";
 import { AuthProvider } from "@/lib/AuthContext";
@@ -38,15 +39,17 @@ export default function RootLayout({
         <ApiProvider>
           <AuthProvider>
             <ApiLoadingProvider>
-              <Header />
+              <Suspense fallback={null}>
+                <Header />
+              </Suspense>
               <GlobalLoader />
-            <ProductSelectionProvider>
-              <ProductActionsProvider>
-                <div style={{ paddingTop: "var(--app-header-height, 120px)" }}>
-                  {children}
-                </div>
-              </ProductActionsProvider>
-            </ProductSelectionProvider>
+              <ProductSelectionProvider>
+                <ProductActionsProvider>
+                  <div style={{ paddingTop: "var(--app-header-height, 120px)" }}>
+                    {children}
+                  </div>
+                </ProductActionsProvider>
+              </ProductSelectionProvider>
             </ApiLoadingProvider>
           </AuthProvider>
         </ApiProvider>

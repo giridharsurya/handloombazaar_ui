@@ -52,9 +52,10 @@ export interface Product {
   category?: string;
   attributes?: {
     definition_id: number;
-    name: string;
     option_id: number;
-    value: string;
+    name?: string;
+    value?: string;
+    option_value?: string;
     is_filterable?: boolean;
   }[];
 }

@@ -88,6 +88,7 @@ export default function ProductEditSidebar({
 
   const [attributeCatalog, setAttributeCatalog] = React.useState<ProductFilterAttribute[]>([]);
   const [selectedOptionByDefinition, setSelectedOptionByDefinition] = React.useState<Record<number, number | null>>({});
+  const [openColorAttributeIds, setOpenColorAttributeIds] = React.useState<Record<number, boolean>>({});
 
   const [isLoadingAttributes, setIsLoadingAttributes] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);

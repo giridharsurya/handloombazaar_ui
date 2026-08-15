@@ -559,7 +559,13 @@ export default function ProductDetails({
           group_product_count: currentProduct.group_product_count,
           is_active: currentProduct.is_active,
           images: currentProduct.images,
-          attributes: currentProduct.attributes,
+          attributes: (currentProduct.attributes ?? []).map((attr) => ({
+            definition_id: attr.definition_id,
+            name: attr.name ?? attr.option_value ?? "",
+            option_id: attr.option_id,
+            value: attr.value ?? attr.option_value ?? "",
+            is_filterable: attr.is_filterable,
+          })),
         }}
         onSaved={(updatedProduct) => {
           setCurrentProduct((prev: any) => ({

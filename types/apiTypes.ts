@@ -109,7 +109,14 @@ export type ProductListItem = {
   created_at: string;
   updated_at: string;
   view_count?: number;
-  attributes: { definition_id: number; option_id: number; option_value?: string }[]; // attribute summary always returned for product list
+  attributes: {
+    definition_id: number;
+    option_id: number;
+    name?: string;
+    value?: string;
+    option_value?: string;
+    is_filterable?: boolean;
+  }[];
 };
 
 export type AnalyticsPeriod = "all" | "week" | "month" | "quarter" | "halfyear" | "year" | "custom";
