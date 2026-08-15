@@ -6,6 +6,26 @@ import { useRouter } from "next/navigation";
 import { useApi } from "@/lib/ApiProvider";
 import { ProductFilterAttribute } from "@/types/apiTypes";
 
+const parseOptionValueColor = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return { label: "", color: null };
+
+  const colorMatch = trimmed.match(/^(.*?)(?:\s+)(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|rgb\([^\)]*\)|hsl\([^\)]*\))$/);
+  if (colorMatch) {
+    return { label: colorMatch[1].trim(), color: colorMatch[2].trim() };
+  }
+
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) return { label: "", color: trimmed };
+  if (/^(rgb|hsl)a?\(/i.test(trimmed)) return { label: "", color: trimmed };
+
+  return { label: trimmed, color: null };
+};
+
+const getOptionSwatchColor = (option: { value: string; color?: string }) => {
+  if (option.color) return option.color;
+  return parseOptionValueColor(option.value).color;
+};
+
 type ShopOption = {
   display_id: string;
   name: string;
@@ -52,6 +72,7 @@ export default function ProductCreateForm({
   const [primaryImageIndex, setPrimaryImageIndex] = useState<number | null>(null);
   const [availableAttributes, setAvailableAttributes] = useState<ProductFilterAttribute[]>([]);
   const [selectedOptionByDefinition, setSelectedOptionByDefinition] = useState<Record<number, number | null>>({});
+  const [openColorAttributeIds, setOpenColorAttributeIds] = useState<Record<number, boolean>>({});
 
   const allowedImageTypes = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
   const allowedImageExtensions = new Set(["jpg", "jpeg", "png", "webp", "gif", "avif"]);
@@ -169,6 +190,16 @@ export default function ProductCreateForm({
     }
     if (primaryImageIndex === null) {
       setError("Please select a primary image");
+      return;
+    }
+
+    const missingRequiredAttributes = availableAttributes.filter(
+      (attribute) =>
+        attribute.is_required &&
+        (selectedOptionByDefinition[attribute.id] === null || selectedOptionByDefinition[attribute.id] === undefined)
+    );
+    if (missingRequiredAttributes.length > 0) {
+      setError(`Please select a value for the required attribute: ${missingRequiredAttributes.map((attribute) => attribute.name).join(", ")}`);
       return;
     }
 
@@ -366,9 +397,95 @@ export default function ProductCreateForm({
                 <div className="mt-4 space-y-4">
                   {availableAttributes.map((attribute) => {
                     const selectedOptionId = selectedOptionByDefinition[attribute.id] ?? null;
+                    const selectedOption = attribute.options.find((option) => option.id === selectedOptionId) ?? null;
+                    const isColorAttribute = /color|colour/i.test(attribute.name) || attribute.options.some((option) => !!getOptionSwatchColor(option));
+
+                    if (isColorAttribute) {
+                      const selectedDisplay = selectedOption
+                        ? (() => {
+                            const { label, color } = parseOptionValueColor(selectedOption.value);
+                            const swatchColor = getOptionSwatchColor(selectedOption) ?? color ?? "#e5e7eb";
+                            const displayLabel = label ? (color ? `${label} ${color}` : label) : selectedOption.value;
+                            return { displayLabel, swatchColor };
+                          })()
+                        : { displayLabel: `Select ${attribute.name}`, swatchColor: "#e5e7eb" };
+
+                      return (
+                        <div key={attribute.id}>
+                          <label className="block text-sm font-medium text-slate-700">
+                            {attribute.name}
+                            {attribute.is_required ? <span className="ml-1 text-rose-600">*</span> : null}
+                          </label>
+
+                          <div className="relative mt-1">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setOpenColorAttributeIds((prev) => ({
+                                  ...prev,
+                                  [attribute.id]: !prev[attribute.id],
+                                }))
+                              }
+                              className="flex w-full items-center justify-between rounded-md border border-slate-300 bg-white px-3 py-2 text-left text-sm shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500"
+                            >
+                              <span className="flex items-center gap-2">
+                                <span
+                                  className="h-4 w-4 rounded-full border border-slate-300"
+                                  style={{ backgroundColor: selectedDisplay.swatchColor }}
+                                />
+                                <span>{selectedDisplay.displayLabel}</span>
+                              </span>
+                              <span className="text-slate-500">▼</span>
+                            </button>
+
+                            {openColorAttributeIds[attribute.id] ? (
+                              <div className="absolute z-10 mt-1 w-full rounded-md border border-slate-300 bg-white shadow-lg">
+                                {attribute.options.map((option) => {
+                                  const { label, color } = parseOptionValueColor(option.value);
+                                  const swatchColor = getOptionSwatchColor(option) ?? color ?? "#e5e7eb";
+                                  const displayLabel = label ? (color ? `${label} ${color}` : label) : option.value;
+                                  const isSelected = selectedOptionId === option.id;
+
+                                  return (
+                                    <button
+                                      key={option.id}
+                                      type="button"
+                                      onClick={() => {
+                                        setSelectedOptionByDefinition((prev) => ({
+                                          ...prev,
+                                          [attribute.id]: option.id,
+                                        }));
+                                        setOpenColorAttributeIds((prev) => ({ ...prev, [attribute.id]: false }));
+                                      }}
+                                      className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm ${
+                                        isSelected ? "bg-slate-100 text-slate-900" : "text-slate-700 hover:bg-slate-50"
+                                      }`}
+                                    >
+                                      <span className="flex items-center gap-2">
+                                        <span
+                                          className="h-4 w-4 rounded-full border border-slate-300"
+                                          style={{ backgroundColor: swatchColor }}
+                                          aria-label={`${displayLabel} swatch`}
+                                        />
+                                        <span>{displayLabel}</span>
+                                      </span>
+                                      {isSelected ? <span className="text-xs font-semibold">Selected</span> : null}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            ) : null}
+                          </div>
+                        </div>
+                      );
+                    }
+
                     return (
                       <div key={attribute.id}>
-                        <label className="block text-sm font-medium text-slate-700">{attribute.name}</label>
+                        <label className="block text-sm font-medium text-slate-700">
+                          {attribute.name}
+                          {attribute.is_required ? <span className="ml-1 text-rose-600">*</span> : null}
+                        </label>
                         <select
                           value={selectedOptionId ?? ""}
                           onChange={(e) => {

@@ -250,7 +250,12 @@ function AllProductsPageInner() {
               />
             </section>
 
-            <div className="w-80 shrink-0">
+            <div
+              className="w-64 shrink-0 self-start sticky"
+              style={{
+                top: "calc(var(--app-header-height, 120px) + var(--filter-header-height, 72px))",
+              }}
+            >
               <ProductActionsSidebar scope="admin" />
             </div>
           </div>

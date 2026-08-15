@@ -957,7 +957,16 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
                   ) : null}
                 </section>
 
-                {showSelectionTools ? resolvedActionsSidebar : null}
+                {showSelectionTools ? (
+                  <div
+                    className="w-64 shrink-0 self-start sticky"
+                    style={{
+                      top: "calc(var(--app-header-height, 120px) + var(--filter-header-height, 72px))",
+                    }}
+                  >
+                    {resolvedActionsSidebar}
+                  </div>
+                ) : null}
               </div>
             </div>
           </section>

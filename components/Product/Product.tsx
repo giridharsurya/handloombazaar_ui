@@ -126,9 +126,21 @@ export default function Product({ product, size = "default", hideShop = false, h
             </div>
           )}
 
-            <h3 className={`font-semibold text-gray-900 dark:text-white truncate whitespace-nowrap overflow-hidden ${isCompact ? "text-xs mb-1" : "text-sm mb-2"}`} title={productName}>
-              {productName}
-            </h3>
+            <div
+              className={`mb-2 min-h-[2.75em] ${isCompact ? "text-xs" : "text-sm"}`}
+              style={{
+                display: "-webkit-box",
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: "vertical",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                lineHeight: isCompact ? "1.25em" : "1.4em",
+              }}
+            >
+              <h3 className="font-semibold text-gray-900 dark:text-white" title={productName}>
+                {productName}
+              </h3>
+            </div>
 
           <div className="flex flex-col gap-2">
             <div className={`flex min-w-0 items-center ${isCompact ? "gap-1" : "gap-2"}`}>

@@ -5,6 +5,26 @@ import { useApi } from "@/lib/ApiProvider";
 import resolveImageUrl from "@/lib/resolveImage";
 import { ProductFilterAttribute } from "@/types/apiTypes";
 
+const parseOptionValueColor = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return { label: "", color: null };
+
+  const colorMatch = trimmed.match(/^(.*?)(?:\s+)(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|rgb\([^\)]*\)|hsl\([^\)]*\))$/);
+  if (colorMatch) {
+    return { label: colorMatch[1].trim(), color: colorMatch[2].trim() };
+  }
+
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) return { label: "", color: trimmed };
+  if (/^(rgb|hsl)a?\(/i.test(trimmed)) return { label: "", color: trimmed };
+
+  return { label: trimmed, color: null };
+};
+
+const getOptionSwatchColor = (option: { value: string; color?: string }) => {
+  if (option.color) return option.color;
+  return parseOptionValueColor(option.value).color;
+};
+
 type ProductAttributeSelection = {
   definition_id: number;
   name: string;
@@ -246,6 +266,16 @@ export default function ProductEditSidebar({
 
     if (previewItems.length === 0) {
       setError("At least one image is required");
+      return;
+    }
+
+    const missingRequiredAttributes = attributeCatalog.filter(
+      (attribute) =>
+        attribute.is_required &&
+        (selectedOptionByDefinition[attribute.id] === null || selectedOptionByDefinition[attribute.id] === undefined)
+    );
+    if (missingRequiredAttributes.length > 0) {
+      setError(`Please select a value for the required attribute: ${missingRequiredAttributes.map((attribute) => attribute.name).join(", ")}`);
       return;
     }
 
@@ -539,6 +569,88 @@ export default function ProductEditSidebar({
               <div className="mt-4 space-y-3">
                 {attributeCatalog.map((attribute) => {
                   const selectedOption = selectedOptionByDefinition[attribute.id] ?? null;
+                  const isColorAttribute = /color|colour/i.test(attribute.name) || attribute.options.some((option) => !!getOptionSwatchColor(option));
+
+                  if (isColorAttribute) {
+                    const selectedOptionDetails = attribute.options.find((option) => option.id === selectedOption) ?? null;
+                    const selectedDisplay = selectedOptionDetails
+                      ? (() => {
+                          const { label, color } = parseOptionValueColor(selectedOptionDetails.value);
+                          const swatchColor = getOptionSwatchColor(selectedOptionDetails) ?? color ?? "#e5e7eb";
+                          const displayLabel = label ? (color ? `${label} ${color}` : label) : selectedOptionDetails.value;
+                          return { displayLabel, swatchColor };
+                        })()
+                      : { displayLabel: `Select ${attribute.name}`, swatchColor: "#e5e7eb" };
+
+                    return (
+                      <div key={attribute.id}>
+                        <label className="mb-1 block text-sm font-medium text-slate-700">
+                          {attribute.name}
+                          {attribute.is_required ? <span className="ml-1 text-rose-600">*</span> : null}
+                        </label>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setOpenColorAttributeIds((prev) => ({
+                                ...prev,
+                                [attribute.id]: !prev[attribute.id],
+                              }))
+                            }
+                            className="flex w-full items-center justify-between rounded border border-slate-300 bg-white px-3 py-2 text-left text-sm focus:border-slate-500 focus:outline-none"
+                          >
+                            <span className="flex items-center gap-2">
+                              <span
+                                className="h-4 w-4 rounded-full border border-slate-300"
+                                style={{ backgroundColor: selectedDisplay.swatchColor }}
+                              />
+                              <span>{selectedDisplay.displayLabel}</span>
+                            </span>
+                            <span className="text-slate-500">▼</span>
+                          </button>
+
+                          {openColorAttributeIds[attribute.id] ? (
+                            <div className="absolute z-10 mt-1 w-full rounded border border-slate-300 bg-white shadow-lg">
+                              {attribute.options.map((option) => {
+                                const { label, color } = parseOptionValueColor(option.value);
+                                const swatchColor = getOptionSwatchColor(option) ?? color ?? "#e5e7eb";
+                                const displayLabel = label ? (color ? `${label} ${color}` : label) : option.value;
+                                const isSelected = selectedOption === option.id;
+
+                                return (
+                                  <button
+                                    key={option.id}
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedOptionByDefinition((prev) => ({
+                                        ...prev,
+                                        [attribute.id]: option.id,
+                                      }));
+                                      setOpenColorAttributeIds((prev) => ({ ...prev, [attribute.id]: false }));
+                                    }}
+                                    className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm ${
+                                      isSelected ? "bg-slate-100 text-slate-900" : "text-slate-700 hover:bg-slate-50"
+                                    }`}
+                                  >
+                                    <span className="flex items-center gap-2">
+                                      <span
+                                        className="h-4 w-4 rounded-full border border-slate-300"
+                                        style={{ backgroundColor: swatchColor }}
+                                        aria-label={`${displayLabel} swatch`}
+                                      />
+                                      <span>{displayLabel}</span>
+                                    </span>
+                                    {isSelected ? <span className="text-xs font-semibold">Selected</span> : null}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  }
+
                   return (
                     <div key={attribute.id}>
                       <label className="mb-1 block text-sm font-medium text-slate-700">

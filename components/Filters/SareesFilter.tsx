@@ -19,6 +19,27 @@ const DEFAULT_FILTERS: FilterState = {
   selectedAttributeOptionIds: {},
 };
 
+const parseOptionValueColor = (value: string) => {
+  const trimmed = value.trim();
+  if (!trimmed) return { label: "", color: null };
+
+  const colorMatch = trimmed.match(/^(.*?)(?:\s+)(#[0-9a-fA-F]{3}|#[0-9a-fA-F]{6}|rgb\([^\)]*\)|hsl\([^\)]*\))$/);
+  if (colorMatch) {
+    return { label: colorMatch[1].trim(), color: colorMatch[2].trim() };
+  }
+
+  if (/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(trimmed)) return { label: "", color: trimmed };
+  if (/^(rgb|hsl)a?\(/i.test(trimmed)) return { label: "", color: trimmed };
+
+  return { label: trimmed, color: null };
+};
+
+const getOptionSwatchColor = (option: { value: string; color?: string }) => {
+  if (option.color) return option.color;
+
+  return parseOptionValueColor(option.value).color;
+};
+
 export default function SareesFilter({ attributes, value, onFilterChange }: SareesFilterProps) {
   const DEBUG_FILTERS = true;
   const [draftFilters, setDraftFilters] = useState<FilterState>(value ?? DEFAULT_FILTERS);
@@ -195,17 +216,35 @@ export default function SareesFilter({ attributes, value, onFilterChange }: Sare
 
             {isOpen ? (
               <div className="mt-3 space-y-2 max-h-48 overflow-y-auto">
-                {attribute.options.map((option) => (
-                  <label key={option.id} className="flex items-center cursor-pointer gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selectedOptions.includes(option.id)}
-                      onChange={() => handleAttributeOptionToggle(attribute.id, option.id)}
-                      className="w-4 h-4 rounded border-gray-300"
-                    />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{option.value}</span>
-                  </label>
-                ))}
+                {attribute.options.map((option) => {
+                  const { label: optionLabel, color: optionColor } = parseOptionValueColor(option.value);
+                  const swatchColor = getOptionSwatchColor(option) ?? optionColor;
+                  const isColorAttribute = /color|colour/i.test(attribute.name) || !!swatchColor;
+                  const displayLabel = optionLabel || option.value;
+
+                  return (
+                    <label key={option.id} className="flex items-center cursor-pointer gap-2">
+                      <input
+                        type="checkbox"
+                        checked={selectedOptions.includes(option.id)}
+                        onChange={() => handleAttributeOptionToggle(attribute.id, option.id)}
+                        className="w-4 h-4 rounded border-gray-300"
+                      />
+
+                      <span className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300">
+                        {isColorAttribute ? (
+                          <span
+                            className="inline-block h-4 w-4 rounded-full border border-gray-300 shadow-inner"
+                            style={{ backgroundColor: swatchColor ?? "#e5e7eb" }}
+                            title={option.value}
+                            aria-label={`${displayLabel} color sample`}
+                          />
+                        ) : null}
+                        <span>{displayLabel}</span>
+                      </span>
+                    </label>
+                  );
+                })}
               </div>
             ) : null}
           </div>

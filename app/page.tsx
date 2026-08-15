@@ -56,7 +56,7 @@ export default function Home() {
       }
 
       try {
-        const rows = await api.shops.list();
+        const rows = await api.shops.list({ sort_by: "newest", page: 1, page_size: 20 });
         if (!mounted) return;
         setShops(
           rows.map((shop: ShopStatusResponse) => ({
@@ -158,7 +158,6 @@ export default function Home() {
             <div className="flex items-center justify-between mb-4">
               <div>
                 <h2 className="text-2xl font-bold text-gray-900">Latest Products</h2>
-                <p className="mt-1 text-sm text-slate-600">Newest arrivals from our artisans.</p>
               </div>
               <Link href="/sarees" className="inline-flex items-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-slate-100">
                 View all

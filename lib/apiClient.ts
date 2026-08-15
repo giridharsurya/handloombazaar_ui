@@ -1,4 +1,9 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:8000";
+export function getApiBaseUrl(): string {
+  const configured = process.env.NEXT_PUBLIC_API_BASE_URL?.trim();
+  return configured && configured.length > 0 ? configured.replace(/\/$/, "") : "http://localhost:8000";
+}
+
+export const API_BASE_URL = getApiBaseUrl();
 
 type FetchOptions = RequestInit & { requiresAuth?: boolean; token?: string; suppressGlobalLoading?: boolean };
 
@@ -59,6 +64,7 @@ export async function apiFetch(
     const res = await fetch(url, {
       ...rest,
       headers,
+      cache: (rest.method && rest.method.toUpperCase() !== "GET" ? undefined : "no-store"),
     });
 
     try {

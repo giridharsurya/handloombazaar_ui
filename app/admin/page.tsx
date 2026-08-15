@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/AuthContext";
+import { getApiBaseUrl } from "@/lib/apiClient";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:8000";
+const API_BASE_URL = getApiBaseUrl();
 
 const adminSections = [
   {

@@ -2,10 +2,11 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import SearchBar from "@/components/SearchBar/SearchBar";
 // Navigation links inlined below (removed `NavigationRibbon` component)
 import { LoginButton } from "@/components/Login/LoginButton";
+import api from "@/lib/api";
 
 function formatCurrentTime() {
   const now = new Date();
@@ -24,12 +25,34 @@ function formatCurrentTime() {
   return `${weekday} ${day}-${month}-${year} ${time}`;
 }
 
+function formatProductTimestamp(value: string | null | undefined) {
+  if (!value) return "No recent product";
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "No recent product";
+  }
+
+  return date.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
 export default function Header() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const headerRef = useRef<HTMLDivElement | null>(null);
   const [currentTime, setCurrentTime] = useState(() => formatCurrentTime());
+  const [latestProductTimestamp, setLatestProductTimestamp] = useState<string | null>(null);
   const searchValue = searchParams.get("search") ?? "";
+  const isHomePage = pathname === "/";
+  const headerTimestamp = isHomePage ? `Latest product: ${formatProductTimestamp(latestProductTimestamp)}` : currentTime;
 
   useEffect(() => {
     if (!headerRef.current) {
@@ -55,12 +78,31 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
-    const interval = window.setInterval(() => {
-      setCurrentTime(formatCurrentTime());
-    }, 60000);
+    if (!isHomePage) {
+      const interval = window.setInterval(() => {
+        setCurrentTime(formatCurrentTime());
+      }, 60000);
 
-    return () => window.clearInterval(interval);
-  }, []);
+      return () => window.clearInterval(interval);
+    }
+
+    let mounted = true;
+
+    void (async () => {
+      try {
+        const pageData = await api.products.getProductsPage({ page: 1, page_size: 20 });
+        if (!mounted) return;
+        const newestCreatedAt = pageData.items?.[0]?.created_at ?? null;
+        setLatestProductTimestamp(newestCreatedAt);
+      } catch (error) {
+        console.error("Failed to load latest product timestamp", error);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [isHomePage]);
 
   return (
     <div
@@ -93,7 +135,7 @@ export default function Header() {
           </div>
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
             <p className="text-sm text-slate-600 dark:text-slate-300">
-              {currentTime}
+              {headerTimestamp}
             </p>
             <LoginButton />
           </div>

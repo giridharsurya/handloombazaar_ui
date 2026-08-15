@@ -12,12 +12,15 @@ export default function AnnouncementsRibbon({
   items?: AnnouncementBanner[];
   onItemClick?: (item: AnnouncementBanner) => void;
 }) {
+  const visibleBannerCount = items.length <= 2 ? items.length : 3;
+  const bannerWidth = visibleBannerCount === 3 ? "calc(33.333% - 0.75rem)" : "calc(50% - 0.5rem)";
+
   return (
     <Ribbon
       // className="px-4"
       items={items}
       renderItem={(it: AnnouncementBanner) => (
-        <div className="announcement-item flex-shrink-0" style={{ width: 'calc(50% - 0.5rem)' }}>
+        <div className="announcement-item flex-shrink-0" style={{ width: bannerWidth }}>
           {onItemClick ? (
             <button
               type="button"

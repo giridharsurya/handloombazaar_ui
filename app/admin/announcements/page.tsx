@@ -76,7 +76,7 @@ export default function AdminAnnouncementsPage() {
           authenticated: true,
         });
         if (!mounted) return;
-        setCollections((rows || []) as Collection[]);
+        setCollections(((rows || []) as Collection[]).filter((c) => c.is_active !== false));
       } catch {
         if (!mounted) return;
         setCollections([]);
@@ -213,6 +213,13 @@ export default function AdminAnnouncementsPage() {
       setMessage("Select a collection.");
       return;
     }
+
+    const selectedCollection = collections.find((c) => c.id === selectedCollectionId);
+    if (!selectedCollection || selectedCollection.is_active === false) {
+      setMessage("You cannot create banners for inactive collections. Please select an active collection.");
+      return;
+    }
+
     if (!title.trim()) {
       setMessage("Banner title is required.");
       return;

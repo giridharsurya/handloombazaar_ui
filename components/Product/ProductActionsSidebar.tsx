@@ -629,8 +629,8 @@ export default function ProductActionsSidebar({ scope }: { scope?: string }) {
   };
 
   return (
-    <aside className="w-64 shrink-0 sticky top-[calc(var(--app-header-height,120px)+var(--filter-header-height,72px))] self-start">
-      <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-6 h-fit border border-gray-200 dark:border-gray-800">
+    <aside className="w-full shrink-0 sticky top-[calc(var(--app-header-height,120px)+var(--filter-header-height,72px))] self-start">
+      <div className="w-full bg-gray-50 dark:bg-gray-900 rounded-lg p-6 h-fit border border-gray-200 dark:border-gray-800">
         <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-6">Actions</h3>
         
         <div className="mb-8 border-t border-gray-200 pt-4 dark:border-gray-700">

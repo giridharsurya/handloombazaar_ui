@@ -170,7 +170,7 @@ export type ProductFilterAttribute = {
   name: string;
   is_filterable?: boolean;
   is_required?: boolean;
-  options: { id: number; value: string }[];
+  options: { id: number; value: string; color?: string }[];
 };
 
 export type ProductUpdateRequest = {

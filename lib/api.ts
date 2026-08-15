@@ -49,8 +49,9 @@ const pendingAnnouncementsListRequests = new Map<string, Promise<AnnouncementBan
 
 export const DEFAULT_PRODUCT_PAGE_SIZE = 20;
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL?.trim() || "http://localhost:8000";
-import { apiFetch } from "./apiClient";
+import { apiFetch, getApiBaseUrl } from "./apiClient";
+
+const API_BASE_URL = getApiBaseUrl();
 
 async function parseError(response: Response) {
   try {
@@ -780,6 +781,7 @@ export const api = {
     },
 
     async order(payload: AnnouncementOrderRequest): Promise<{ message: string }> {
+      pendingAnnouncementsListRequests.clear();
       const res = await apiFetch(`/api/announcements/order`, {
         method: "POST",
         body: JSON.stringify(payload),
@@ -790,6 +792,7 @@ export const api = {
     },
 
     async upsert(payload: AnnouncementUpsertRequest): Promise<AnnouncementBanner> {
+      pendingAnnouncementsListRequests.clear();
       const res = await apiFetch(`/api/announcements/upsert`, {
         method: "POST",
         body: JSON.stringify(payload),
@@ -801,6 +804,7 @@ export const api = {
     },
 
     async deleteByCollection(collectionId: number, params: { shop_display_id?: string } = {}): Promise<void> {
+      pendingAnnouncementsListRequests.clear();
       const qs = new URLSearchParams();
       if (params.shop_display_id) qs.append("shop_display_id", params.shop_display_id);
 
