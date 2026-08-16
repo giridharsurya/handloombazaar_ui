@@ -156,21 +156,6 @@ export default function ShopsPage() {
         </div>
       </section>
 
-      <div className="px-4 pb-8">
-        <section className="mt-16 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900 p-8">
-          <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-3">
-            Sample Footer Content
-          </h2>
-          <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-            This is temporary placeholder content to validate that the filter header
-            and filters section move up once the shops area ends.
-          </p>
-          <p className="text-sm text-gray-700 dark:text-gray-300">
-            Replace this block later with links, copyright text, newsletter signup,
-            policy links, or any other end-of-page content.
-          </p>
-        </section>
-      </div>
     </main>
   );
 }

@@ -64,6 +64,27 @@ export type TokenVerifyResponse = {
   role: UserRole | null;
 };
 
+export type ForgotPasswordRequest = {
+  email: string;
+};
+
+export type ForgotPasswordVerifyRequest = {
+  email: string;
+  otp_code: string;
+};
+
+export type ForgotPasswordCredentialResponse = {
+  success: boolean;
+  username?: string | null;
+  message: string;
+};
+
+export type ResetPasswordRequest = {
+  email: string;
+  otp_code: string;
+  new_password: string;
+};
+
 export type ProductCreateRequest = {
   shop_display_id: string;
   name: string;

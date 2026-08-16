@@ -24,6 +24,10 @@ import {
   BulkProductActionRequest,
   BulkProductActionResponse,
   TokenVerifyResponse,
+  ForgotPasswordRequest,
+  ForgotPasswordVerifyRequest,
+  ForgotPasswordCredentialResponse,
+  ResetPasswordRequest,
   GetShopStatusRequest,
   ShopStatusResponse,
   ListShopsResponse,
@@ -173,6 +177,47 @@ export const api = {
     async verify(token: string): Promise<TokenVerifyResponse> {
       const res = await apiFetch(`/api/auth/shop/verify?token=${encodeURIComponent(token)}`, {
         method: "POST",
+        requiresAuth: false,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async requestPasswordReset(email: string): Promise<{ success: boolean; message: string }> {
+      const res = await apiFetch(`/api/auth/forgot-password/request-otp`, {
+        method: "POST",
+        body: JSON.stringify({ email } as ForgotPasswordRequest),
+        requiresAuth: false,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async verifyPasswordReset(email: string, otp_code: string): Promise<{ success: boolean; message: string }> {
+      const res = await apiFetch(`/api/auth/forgot-password/verify-otp`, {
+        method: "POST",
+        body: JSON.stringify({ email, otp_code } as ForgotPasswordVerifyRequest),
+        requiresAuth: false,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async retrievePasswordReset(email: string, otp_code: string): Promise<ForgotPasswordCredentialResponse> {
+      const res = await apiFetch(`/api/auth/forgot-password/retrieve-credentials`, {
+        method: "POST",
+        body: JSON.stringify({ email, otp_code }),
+        requiresAuth: false,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
+    async resetPassword(email: string, otp_code: string, new_password: string): Promise<ForgotPasswordCredentialResponse> {
+      const payload: ResetPasswordRequest = { email, otp_code, new_password };
+      const res = await apiFetch(`/api/auth/forgot-password/reset-password`, {
+        method: "POST",
+        body: JSON.stringify(payload),
         requiresAuth: false,
       });
       if (!res.ok) throw new Error(await parseError(res));
