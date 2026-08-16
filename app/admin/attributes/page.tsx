@@ -27,6 +27,7 @@ export default function AdminAttributesPage() {
     is_required: false,
   });
   const [expandedAttributeId, setExpandedAttributeId] = useState<number | null>(null);
+  const [newOptionValues, setNewOptionValues] = useState<Record<number, string>>({});
   const [editingOptionId, setEditingOptionId] = useState<number | null>(null);
   const [editingOptionValue, setEditingOptionValue] = useState("");
 
@@ -116,6 +117,26 @@ export default function AdminAttributesPage() {
       await loadAttributes();
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to update attribute";
+      setFeedback(message);
+    }
+  };
+
+  const handleCreateOption = async (attributeId: number) => {
+    setFeedback("");
+
+    const optionValue = (newOptionValues[attributeId] ?? "").trim();
+    if (!optionValue) {
+      setFeedback("Option value is required.");
+      return;
+    }
+
+    try {
+      await api.admin.createOption(attributeId, { option_value: optionValue });
+      setNewOptionValues((prev) => ({ ...prev, [attributeId]: "" }));
+      setFeedback("Option created successfully.");
+      await loadAttributes();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to create option";
       setFeedback(message);
     }
   };
@@ -324,57 +345,74 @@ export default function AdminAttributesPage() {
                         </div>
                       </div>
 
-                      {expandedAttributeId === attr.id && attr.options.length > 0 && (
+                      {expandedAttributeId === attr.id && (
                         <div className="border-t border-slate-200 pt-3">
-                          <p className="mb-2 text-xs font-medium text-slate-600">Options ({attr.options.length})</p>
-                          <div className="space-y-2">
-                            {attr.options.map((opt) =>
-                              editingOptionId === opt.id ? (
-                                <div key={opt.id} className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    className="flex-1 rounded border border-slate-300 px-2 py-1 text-xs"
-                                    value={editingOptionValue}
-                                    onChange={(e) => setEditingOptionValue(e.target.value)}
-                                  />
-                                  <button type="button" onClick={() => handleUpdateOption(attr.id, opt.id)} className="rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-500">Save</button>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setEditingOptionId(null);
-                                      setEditingOptionValue("");
-                                    }}
-                                    className="rounded-md bg-slate-400 px-2 py-1 text-xs font-semibold text-white hover:bg-slate-300"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
-                                <div key={opt.id} className="flex items-center justify-between rounded bg-slate-50 px-2 py-1.5">
-                                  <span className="text-xs">{opt.value}</span>
-                                  <div className="flex gap-1">
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setEditingOptionId(opt.id);
-                                        setEditingOptionValue(opt.value);
-                                      }}
-                                      className="rounded-md bg-slate-600 px-1.5 py-0.5 text-xs font-semibold text-white hover:bg-slate-500"
-                                    >
-                                      Edit
-                                    </button>
-                                    <button type="button" onClick={() => handleDeleteOption(attr.id, opt.id)} className="rounded-md bg-rose-600 px-1.5 py-0.5 text-xs font-semibold text-white hover:bg-rose-500">Delete</button>
-                                  </div>
-                                </div>
-                              )
-                            )}
+                          <div className="mb-3 flex gap-2">
+                            <input
+                              type="text"
+                              className="flex-1 rounded border border-slate-300 px-2 py-1.5 text-xs"
+                              value={newOptionValues[attr.id] ?? ""}
+                              onChange={(e) => setNewOptionValues((prev) => ({ ...prev, [attr.id]: e.target.value }))}
+                              placeholder="Add option value"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleCreateOption(attr.id)}
+                              className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-500"
+                            >
+                              Add
+                            </button>
                           </div>
-                        </div>
-                      )}
 
-                      {expandedAttributeId === attr.id && attr.options.length === 0 && (
-                        <div className="border-t border-slate-200 pt-3">
-                          <p className="text-xs text-slate-600">No options available.</p>
+                          {attr.options.length > 0 ? (
+                            <>
+                              <p className="mb-2 text-xs font-medium text-slate-600">Options ({attr.options.length})</p>
+                              <div className="space-y-2">
+                                {attr.options.map((opt) =>
+                                  editingOptionId === opt.id ? (
+                                    <div key={opt.id} className="flex gap-2">
+                                      <input
+                                        type="text"
+                                        className="flex-1 rounded border border-slate-300 px-2 py-1 text-xs"
+                                        value={editingOptionValue}
+                                        onChange={(e) => setEditingOptionValue(e.target.value)}
+                                      />
+                                      <button type="button" onClick={() => handleUpdateOption(attr.id, opt.id)} className="rounded-md bg-emerald-600 px-2 py-1 text-xs font-semibold text-white hover:bg-emerald-500">Save</button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingOptionId(null);
+                                          setEditingOptionValue("");
+                                        }}
+                                        className="rounded-md bg-slate-400 px-2 py-1 text-xs font-semibold text-white hover:bg-slate-300"
+                                      >
+                                        Cancel
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div key={opt.id} className="flex items-center justify-between rounded bg-slate-50 px-2 py-1.5">
+                                      <span className="text-xs">{opt.value}</span>
+                                      <div className="flex gap-1">
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setEditingOptionId(opt.id);
+                                            setEditingOptionValue(opt.value);
+                                          }}
+                                          className="rounded-md bg-slate-600 px-1.5 py-0.5 text-xs font-semibold text-white hover:bg-slate-500"
+                                        >
+                                          Edit
+                                        </button>
+                                        <button type="button" onClick={() => handleDeleteOption(attr.id, opt.id)} className="rounded-md bg-rose-600 px-1.5 py-0.5 text-xs font-semibold text-white hover:bg-rose-500">Delete</button>
+                                      </div>
+                                    </div>
+                                  )
+                                )}
+                              </div>
+                            </>
+                          ) : (
+                            <p className="text-xs text-slate-600">No options available.</p>
+                          )}
                         </div>
                       )}
                     </div>

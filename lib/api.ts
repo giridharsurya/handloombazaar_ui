@@ -509,6 +509,16 @@ export const api = {
       return res.json();
     },
 
+    async createOption(attributeId: number, payload: any) {
+      const res = await apiFetch(`/api/admin/attributes/${attributeId}/options`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        requiresAuth: true,
+      });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
+
     async updateAttribute(attributeId: number, payload: any) {
       const res = await apiFetch(`/api/admin/attributes/${attributeId}`, {
         method: "PUT",
