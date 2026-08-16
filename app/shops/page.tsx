@@ -123,6 +123,7 @@ export default function ShopsPage() {
         <FilterHeader
           pageTitle="Shops"
           productCount={totalShops}
+          countLabel="shops"
           showFiltersToggle={false}
           sortBy={sortBy}
           onSortChange={handleSortChange}

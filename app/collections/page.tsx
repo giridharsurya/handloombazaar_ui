@@ -117,6 +117,7 @@ export default function SystemCollectionsPage() {
         <FilterHeader
           pageTitle="Collections"
           productCount={totalCollections}
+          countLabel="collections"
           showFiltersToggle={false}
           sortBy={sortBy}
           onSortChange={handleSortChange}

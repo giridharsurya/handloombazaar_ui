@@ -12,6 +12,7 @@ type SortOptionItem = {
 type FilterHeaderProps = {
   pageTitle: string;
   productCount: number;
+  countLabel?: string;
   showFiltersToggle?: boolean;
   onToggleFilters?: () => void;
   filtersOpen?: boolean;
@@ -24,6 +25,7 @@ type FilterHeaderProps = {
 export default function FilterHeader({
   pageTitle,
   productCount,
+  countLabel = "products",
   showFiltersToggle = true,
   onToggleFilters,
   filtersOpen = true,
@@ -113,7 +115,7 @@ export default function FilterHeader({
               {pageTitle}
             </h1>
             <p className="text-xs text-gray-600 dark:text-gray-400">
-              Showing {productCount} products
+              Showing {productCount} {countLabel}
             </p>
           </div>
 
