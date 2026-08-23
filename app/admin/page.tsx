@@ -93,7 +93,7 @@ export default function AdminPage() {
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Admin Console</p>
-          <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Handloom Bazaar Management</h1>
+          <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Handloom Stores Management</h1>
           <p className="mt-2 text-sm text-slate-600">
             Use the dedicated pages below to manage collections, attributes, and shops.
           </p>

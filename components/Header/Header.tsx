@@ -117,7 +117,7 @@ export default function Header() {
                 href="/"
                 className="text-3xl font-bold text-gray-900 dark:text-white hover:text-rose-600 transition-colors"
               >
-                Handloom Bazaar
+                Handloom Stores
               </Link>
             </div>
             <div className="w-full max-w-2xl">

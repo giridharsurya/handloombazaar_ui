@@ -1,63 +1,71 @@
-"use client";
+import type { Metadata } from "next";
+import ShopPageClient from "./ShopPageClient";
+import { buildEntityMetadata, fetchPublicJson, toMetadataText, truncateText, jsonLdScript, buildShopJsonLd } from "@/lib/seo";
 
-import React, { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
-import ShopDetailsPage from "@/components/Shop/ShopDetailsPage";
-import { VariantSelectionProvider } from "@/lib/VariantSelectionContext";
-import api from "@/lib/api";
-import type { ProductListItem, ShopDetail } from "@/types/apiTypes";
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  try {
+    const { id } = await params;
+    const shop = await fetchPublicJson<{ name: string; description?: string | null; city?: string | null; address?: string | null; website_url?: string | null; phone_number?: string | null; instagram_url?: string | null; facebook_url?: string | null; youtube_url?: string | null; email?: string | null }> (`/api/shops/${encodeURIComponent(id)}`);
 
-export default function ShopPage() {
-  const params = useParams();
-  const displayId = typeof params?.id === "string" ? params.id : undefined;
-  const [shop, setShop] = useState<ShopDetail | null>(null);
-  const [products, setProducts] = useState<ProductListItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+    const title = `${shop.name} | Mangalagiri Handloom Store`;
+    const description = truncateText(
+      shop.description || `${shop.name} in ${shop.city || "Andhra Pradesh"} offers authentic Mangalagiri handloom sarees, cotton weaves, and heritage craftsmanship from local weaving traditions.`,
+      180,
+    );
 
-  useEffect(() => {
-    if (!displayId) {
-      setError("Invalid shop id.");
-      setLoading(false);
-      return;
-    }
-
-    let mounted = true;
-
-    const loadShop = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const shopData = await api.shops.getDetail({ display_id: displayId });
-        const productData = await api.products.getProducts({ page: 1, page_size: 20, shop_display_id: displayId });
-        if (!mounted) return;
-        setShop(shopData);
-        setProducts(productData);
-      } catch (err) {
-        if (!mounted) return;
-        setError(err instanceof Error ? err.message : "Failed to load shop");
-      } finally {
-        if (mounted) setLoading(false);
-      }
+    return buildEntityMetadata({
+      title,
+      description,
+      path: `/shops/${encodeURIComponent(id)}`,
+      keywords: [
+        shop.name,
+        shop.city,
+        shop.address,
+        "Mangalagiri handloom store",
+        "Andhra Pradesh weaving shop",
+        "Mangalagiri cotton sarees",
+        "handwoven sarees from Andhra Pradesh",
+        shop.instagram_url,
+        shop.website_url,
+      ],
+    });
+  } catch {
+    return {
+      title: "Mangalagiri Handloom Store | Andhra Pradesh",
+      description: "Explore authentic Mangalagiri handloom stores and Andhra Pradesh weaving shops for handcrafted cotton sarees.",
     };
-
-    loadShop();
-    return () => {
-      mounted = false;
-    };
-  }, [displayId]);
-
-  if (loading) {
-    return <div className="px-4 py-6 text-sm text-slate-600">Loading shop...</div>;
   }
+}
 
-  if (error || !shop) {
-    return <div className="px-4 py-6 text-sm text-rose-600">{error || "Shop not found."}</div>;
+export default async function ShopPage({ params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const shop = await fetchPublicJson<{ name: string; description?: string | null; city?: string | null; address?: string | null; website_url?: string | null; phone_number?: string | null; instagram_url?: string | null; facebook_url?: string | null; youtube_url?: string | null; email?: string | null; shop_logo_url?: string | null }> (`/api/shops/${encodeURIComponent(id)}`);
+    const shopUrl = `https://www.handloomstores.com/shops/${encodeURIComponent(id)}`;
+
+    return (
+      <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: jsonLdScript(
+              buildShopJsonLd({
+                name: shop.name,
+                description: shop.description,
+                url: shopUrl,
+                city: shop.city,
+                address: shop.address,
+                telephone: shop.phone_number,
+                sameAs: [shop.instagram_url, shop.facebook_url, shop.youtube_url, shop.website_url],
+                image: shop.shop_logo_url,
+              })
+            ),
+          }}
+        />
+        <ShopPageClient />
+      </>
+    );
+  } catch {
+    return <ShopPageClient />;
   }
-
-  return (
-    <VariantSelectionProvider>
-      <ShopDetailsPage shop={shop} products={products} scope={"public"} />
-    </VariantSelectionProvider>
-  );
 }
