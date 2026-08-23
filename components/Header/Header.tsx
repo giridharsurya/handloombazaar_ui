@@ -8,23 +8,6 @@ import SearchBar from "@/components/SearchBar/SearchBar";
 import { LoginButton } from "@/components/Login/LoginButton";
 import api from "@/lib/api";
 
-function formatCurrentTime() {
-  const now = new Date();
-
-  const weekday = now.toLocaleDateString("en-US", { weekday: "long" });
-  const day = String(now.getDate()).padStart(2, "0");
-  const month = now.toLocaleDateString("en-US", { month: "long" });
-  const year = now.getFullYear();
-
-  const time = now.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
-
-  return `${weekday} ${day}-${month}-${year} ${time}`;
-}
-
 function formatProductTimestamp(value: string | null | undefined) {
   if (!value) return "No recent product";
 
@@ -33,14 +16,15 @@ function formatProductTimestamp(value: string | null | undefined) {
     return "No recent product";
   }
 
-  return date.toLocaleString("en-US", {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Kolkata",
     month: "short",
     day: "numeric",
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
-  });
+  }).format(date);
 }
 
 export default function Header() {
@@ -48,11 +32,10 @@ export default function Header() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const headerRef = useRef<HTMLDivElement | null>(null);
-  const [currentTime, setCurrentTime] = useState(() => formatCurrentTime());
   const [latestProductTimestamp, setLatestProductTimestamp] = useState<string | null>(null);
   const searchValue = searchParams.get("search") ?? "";
   const isHomePage = pathname === "/";
-  const headerTimestamp = isHomePage ? `Latest product: ${formatProductTimestamp(latestProductTimestamp)}` : currentTime;
+  const headerTimestamp = isHomePage ? `Latest product: ${formatProductTimestamp(latestProductTimestamp)}` : null;
 
   useEffect(() => {
     if (!headerRef.current) {
@@ -79,11 +62,7 @@ export default function Header() {
 
   useEffect(() => {
     if (!isHomePage) {
-      const interval = window.setInterval(() => {
-        setCurrentTime(formatCurrentTime());
-      }, 60000);
-
-      return () => window.clearInterval(interval);
+      return;
     }
 
     let mounted = true;
@@ -134,9 +113,11 @@ export default function Header() {
             </div>
           </div>
           <div className="flex flex-col items-end gap-2 flex-shrink-0">
-            <p className="text-sm text-slate-600 dark:text-slate-300">
-              {headerTimestamp}
-            </p>
+            {headerTimestamp ? (
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                {headerTimestamp}
+              </p>
+            ) : null}
             <LoginButton />
           </div>
         </div>
