@@ -7,6 +7,7 @@ import Icon from "@/components/Icon/Icon";
 
 type ShopRibbonItem = {
   display_id: string;
+  shop_slug?: string;
   name: string;
   shop_logo_url: string;
 };

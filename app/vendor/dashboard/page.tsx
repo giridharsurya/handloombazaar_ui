@@ -48,6 +48,8 @@ export default function ShopDashboard() {
         setShopForm({
           name: detail.name || "",
           email: detail.email || "",
+          shop_slug: detail.shop_slug || "",
+          description: detail.description || "",
           year_established: String(detail.year_established || ""),
           address: detail.address || "",
           city: detail.city || "",
@@ -107,6 +109,8 @@ export default function ShopDashboard() {
       const updated = await api.shops.update(auth.shop_display_id, {
         name: shopForm.name.trim(),
         email: shopForm.email.trim(),
+        shop_slug: shopForm.shop_slug.trim(),
+        description: shopForm.description.trim() || null,
         year_established: parsedYear,
         address: shopForm.address.trim(),
         city: shopForm.city.trim(),
@@ -120,6 +124,8 @@ export default function ShopDashboard() {
       setShopForm({
         name: updated.name || "",
         email: updated.email || "",
+        shop_slug: updated.shop_slug || "",
+        description: updated.description || "",
         year_established: String(updated.year_established || ""),
         address: updated.address || "",
         city: updated.city || "",

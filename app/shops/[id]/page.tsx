@@ -1,11 +1,15 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import ShopPageClient from "./ShopPageClient";
-import { buildEntityMetadata, fetchPublicJson, toMetadataText, truncateText, jsonLdScript, buildShopJsonLd } from "@/lib/seo";
+import { buildEntityMetadata, fetchPublicJson, truncateText, jsonLdScript, buildShopJsonLd } from "@/lib/seo";
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   try {
     const { id } = await params;
-    const shop = await fetchPublicJson<{ name: string; description?: string | null; city?: string | null; address?: string | null; website_url?: string | null; phone_number?: string | null; instagram_url?: string | null; facebook_url?: string | null; youtube_url?: string | null; email?: string | null }> (`/api/shops/${encodeURIComponent(id)}`);
+    const shop = await fetchPublicJson<{ name: string; description?: string | null; city?: string | null; address?: string | null; website_url?: string | null; phone_number?: string | null; instagram_url?: string | null; facebook_url?: string | null; youtube_url?: string | null; email?: string | null; shop_slug?: string | null; approved?: boolean; is_active?: boolean }> (`/api/shops/${encodeURIComponent(id)}`);
+    const canonicalSlug = shop.shop_slug || id;
+    const canonicalPath = `/shops/${encodeURIComponent(canonicalSlug)}`;
+    const isPublicShop = Boolean(shop.approved && shop.is_active && shop.shop_slug);
 
     const title = `${shop.name} | Mangalagiri Handloom Store`;
     const description = truncateText(
@@ -16,7 +20,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     return buildEntityMetadata({
       title,
       description,
-      path: `/shops/${encodeURIComponent(id)}`,
+      path: canonicalPath,
       keywords: [
         shop.name,
         shop.city,
@@ -28,11 +32,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
         shop.instagram_url,
         shop.website_url,
       ],
+      robots: isPublicShop ? undefined : { index: false, follow: false },
     });
   } catch {
     return {
       title: "Mangalagiri Handloom Store | Andhra Pradesh",
       description: "Explore authentic Mangalagiri handloom stores and Andhra Pradesh weaving shops for handcrafted cotton sarees.",
+      robots: { index: false, follow: false },
     };
   }
 }
@@ -40,8 +46,17 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
 export default async function ShopPage({ params }: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await params;
-    const shop = await fetchPublicJson<{ name: string; description?: string | null; city?: string | null; address?: string | null; website_url?: string | null; phone_number?: string | null; instagram_url?: string | null; facebook_url?: string | null; youtube_url?: string | null; email?: string | null; shop_logo_url?: string | null }> (`/api/shops/${encodeURIComponent(id)}`);
-    const shopUrl = `https://www.handloomstores.com/shops/${encodeURIComponent(id)}`;
+    const shop = await fetchPublicJson<{ name: string; description?: string | null; city?: string | null; address?: string | null; website_url?: string | null; phone_number?: string | null; instagram_url?: string | null; facebook_url?: string | null; youtube_url?: string | null; email?: string | null; shop_slug?: string | null; shop_logo_url?: string | null; approved?: boolean; is_active?: boolean }> (`/api/shops/${encodeURIComponent(id)}`);
+
+    if (!shop.approved || !shop.is_active || !shop.shop_slug) {
+      return <ShopPageClient />;
+    }
+
+    if (shop.shop_slug && shop.shop_slug !== id) {
+      redirect(`/shops/${encodeURIComponent(shop.shop_slug)}`);
+    }
+
+    const shopUrl = `https://www.handloomstores.com/shops/${encodeURIComponent(shop.shop_slug || id)}`;
 
     return (
       <>

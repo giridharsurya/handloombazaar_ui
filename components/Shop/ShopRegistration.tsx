@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useAuth } from "@/lib/AuthContext";
 import { useRouter } from "next/navigation";
+import api from "@/lib/api";
 import ShopEditableFields, { ShopEditableValues } from "@/components/Shop/ShopEditableFields";
 import ShopLogoUploadField from "@/components/Shop/ShopLogoUploadField";
 
@@ -19,10 +20,15 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [isValidatingSlug, setIsValidatingSlug] = useState(false);
+  const [slugValidationMessage, setSlugValidationMessage] = useState<string | null>(null);
+  const [slugValidated, setSlugValidated] = useState(false);
 
   const [formData, setFormData] = useState({
     name: "",
     email: "",
+    shop_slug: "",
+    description: "",
     username: "",
     password: "",
     confirmPassword: "",
@@ -45,8 +51,36 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
       ...prev,
       [name]: value,
     }));
+    if (name === "shop_slug") {
+      setSlugValidationMessage(value.trim() ? "Slug changed. Please validate again before submit." : "Shop slug is required before registration.");
+      setSlugValidated(false);
+    }
     setLocalError(null);
     clearError();
+  };
+
+  const handleValidateSlug = async () => {
+    const candidate = formData.shop_slug.trim();
+    if (!candidate) {
+      setSlugValidationMessage("Shop slug is required before registration.");
+      setSlugValidated(false);
+      return;
+    }
+
+    setIsValidatingSlug(true);
+    setLocalError(null);
+    clearError();
+    try {
+      const response = await api.shops.validateSlug(candidate);
+      setSlugValidationMessage(response.message || "Slug is available.");
+      setSlugValidated(Boolean(response.valid));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to validate shop slug.";
+      setSlugValidationMessage(message);
+      setSlugValidated(false);
+    } finally {
+      setIsValidatingSlug(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -96,6 +130,14 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
       setLocalError("Phone number is required");
       return;
     }
+    if (!formData.shop_slug.trim()) {
+      setLocalError("Shop slug is required before registration.");
+      return;
+    }
+    if (!slugValidated) {
+      setLocalError("Please validate the shop slug before submitting.");
+      return;
+    }
     if (!formData.shop_logo) {
       setLocalError("Please select a shop logo image to upload");
       return;
@@ -106,6 +148,8 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
       await register({
         shop_name: formData.name,
         email: formData.email,
+        shop_slug: formData.shop_slug.trim(),
+        description: formData.description.trim() || undefined,
         username: formData.username,
         password: formData.password,
         year_established: parsedYear,
@@ -145,7 +189,14 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        <ShopEditableFields values={formData as ShopEditableValues} onChange={handleChange} />
+        <ShopEditableFields
+          values={formData as ShopEditableValues}
+          onChange={handleChange}
+          onValidateSlug={handleValidateSlug}
+          isValidatingSlug={isValidatingSlug}
+          slugValidationMessage={slugValidationMessage}
+          slugValidated={slugValidated}
+        />
 
         {/* Username */}
         <div>

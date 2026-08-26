@@ -13,6 +13,7 @@ import type { AnnouncementBanner, Collection, ProductListItem, ShopStatusRespons
 
 type HomeShopItem = {
   display_id: string;
+  shop_slug?: string;
   name: string;
   shop_logo_url: string;
 };
@@ -58,9 +59,11 @@ export default function HomePageContent() {
       try {
         const rows = await api.shops.list({ sort_by: "newest", page: 1, page_size: 20 });
         if (!mounted) return;
+        const validShops = (rows || []).filter((shop: ShopStatusResponse) => Boolean(shop?.shop_slug));
         setShops(
-          rows.map((shop: ShopStatusResponse) => ({
+          validShops.map((shop: ShopStatusResponse) => ({
             display_id: shop.display_id,
+            shop_slug: shop.shop_slug,
             name: shop.name,
             shop_logo_url: shop.shop_logo_url,
           }))
@@ -125,7 +128,10 @@ export default function HomePageContent() {
         <div className="w-full space-y-4">
           <AnnouncementsRibbon items={announcements} onItemClick={handleAnnouncementClick} />
 
-          <ShopRibbon shops={shops} onShopClick={(shop) => router.push(`/shops/${shop.display_id}`)} />
+          <ShopRibbon shops={shops} onShopClick={(shop) => {
+            if (!shop.shop_slug) return;
+            router.push(`/shops/${shop.shop_slug}`);
+          }} />
 
           {homepageRibbonRows.length > 0 ? (
             <section className="space-y-4">

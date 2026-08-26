@@ -124,17 +124,20 @@ export function buildShopJsonLd({
 }) {
   return {
     "@context": "https://schema.org",
-    "@type": "Store",
+    "@type": "LocalBusiness",
     name,
     description: description || `${name} offers authentic Mangalagiri handloom sarees and Andhra Pradesh cotton weaves from trusted local weaving traditions.`,
     url,
+    logo: image || undefined,
     image: image || undefined,
     telephone: telephone || undefined,
+    areaServed: "Andhra Pradesh",
     address: address || city
       ? {
           "@type": "PostalAddress",
-          addressLocality: city || undefined,
           streetAddress: address || undefined,
+          addressLocality: city || undefined,
+          addressRegion: city ? "Andhra Pradesh" : undefined,
           addressCountry: "IN",
         }
       : undefined,
@@ -210,12 +213,14 @@ export function buildEntityMetadata({
   path,
   keywords,
   ogImage,
+  robots,
 }: {
   title: string;
   description?: string | null;
   path: string;
   keywords?: Array<string | null | undefined>;
   ogImage?: string | null;
+  robots?: Metadata["robots"];
 }): Metadata {
   const safeDescription = truncateText(description, 180) || "Explore authentic Mangalagiri handloom sarees and Andhra Pradesh cotton weaves from trusted local weaving stores.";
   const keywordList = [...new Set(
@@ -232,20 +237,22 @@ export function buildEntityMetadata({
       .map((value) => value.trim())
       .filter((value) => value.length > 0)
   )].slice(0, 25);
+  const canonicalUrl = new URL(path, "https://www.handloomstores.com").toString();
 
   return {
     title,
     description: safeDescription,
     keywords: keywordList,
+    robots,
     alternates: {
-      canonical: path,
+      canonical: canonicalUrl,
     },
     openGraph: {
       title,
       description: safeDescription,
       type: "website",
       siteName: "Handloom Stores",
-      url: path,
+      url: canonicalUrl,
       images: ogImage ? [ogImage] : undefined,
     },
   };

@@ -372,6 +372,13 @@ export const api = {
   },
 
   shops: {
+    async validateSlug(slug: string, displayId?: string): Promise<{ valid: boolean; slug: string; message: string }> {
+      const params = new URLSearchParams({ slug });
+      if (displayId) params.set("display_id", displayId);
+      const res = await apiFetch(`/api/shops/validate-slug?${params.toString()}`, { requiresAuth: false });
+      if (!res.ok) throw new Error(await parseError(res));
+      return res.json();
+    },
     async getStatus(request: GetShopStatusRequest): Promise<ShopStatusResponse> {
       const cacheKey = `/api/shops/${encodeURIComponent(request.display_id)}/status`;
       if (pendingShopStatusRequests.has(cacheKey)) {

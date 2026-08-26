@@ -4,6 +4,7 @@ export type ID = string | number;
 
 export interface Shop {
   id: ID;
+  shop_slug?: string;
   name: string;
   logo_url: string;
   description?: string;
@@ -36,6 +37,7 @@ export interface Product {
   images?: string[];
   shop?: {
     display_id: string;
+    shop_slug?: string;
     name: string;
     shop_logo_url: string;
     email?: string;

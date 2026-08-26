@@ -24,6 +24,8 @@ interface AuthContextType {
     password: string;
     shop_name: string;
     email: string;
+    shop_slug?: string;
+    description?: string;
     year_established: number;
     address: string;
     city: string;
@@ -116,6 +118,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     password: string;
     shop_name: string;
     email: string;
+    shop_slug?: string;
+    description?: string;
     year_established: number;
     address: string;
     city: string;
@@ -136,6 +140,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         form.append("password", userData.password);
         form.append("shop_name", userData.shop_name);
         form.append("email", userData.email);
+        if (userData.shop_slug) form.append("shop_slug", userData.shop_slug);
+        if (userData.description) form.append("description", userData.description);
         form.append("year_established", String(userData.year_established));
         form.append("address", userData.address);
         form.append("city", userData.city);
@@ -152,6 +158,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           password: userData.password,
           shop_name: userData.shop_name,
           email: userData.email,
+          shop_slug: userData.shop_slug,
+          description: userData.description,
           year_established: userData.year_established,
           address: userData.address,
           city: userData.city,

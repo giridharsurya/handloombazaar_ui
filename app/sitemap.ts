@@ -22,9 +22,10 @@ async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
       const shops = await shopsResponse.json();
       const items = Array.isArray(shops?.items) ? shops.items : Array.isArray(shops) ? shops : [];
       items.forEach((shop: any) => {
-        if (shop?.display_id) {
+        const shopSlug = shop?.shop_slug;
+        if (shopSlug) {
           publicEntries.push({
-            url: `${baseUrl}/shops/${encodeURIComponent(shop.display_id)}`,
+            url: `${baseUrl}/shops/${encodeURIComponent(shopSlug)}`,
             lastModified: new Date(),
             changeFrequency: "weekly",
             priority: 0.7,

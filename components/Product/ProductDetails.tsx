@@ -392,7 +392,7 @@ export default function ProductDetails({
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">{shopName}</p>
               </div>
             </div>
-            <a href={`/shops/${shop?.id ?? currentProduct.shop_display_id ?? currentProduct?.shop?.display_id ?? ""}`} className="text-sm font-medium text-rose-600 hover:underline">
+            <a href={currentProduct?.shop?.shop_slug || shop?.shop_slug ? `/shops/${currentProduct?.shop?.shop_slug || shop?.shop_slug}` : '#'} className="text-sm font-medium text-rose-600 hover:underline" aria-disabled={!currentProduct?.shop?.shop_slug && !shop?.shop_slug}>
               Visit shop
             </a>
           </div>

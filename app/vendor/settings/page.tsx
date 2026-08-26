@@ -15,6 +15,9 @@ export default function VendorSettingsPage() {
   const [currentLogoUrl, setCurrentLogoUrl] = React.useState<string | null>(null);
   const [isSavingShop, setIsSavingShop] = React.useState(false);
   const [shopFormFeedback, setShopFormFeedback] = React.useState<string>("");
+  const [isValidatingSlug, setIsValidatingSlug] = React.useState(false);
+  const [slugValidationMessage, setSlugValidationMessage] = React.useState<string | null>(null);
+  const [slugValidated, setSlugValidated] = React.useState(false);
 
   React.useEffect(() => {
     if (!isLoading && !auth) {
@@ -34,6 +37,8 @@ export default function VendorSettingsPage() {
         setShopForm({
           name: detail.name || "",
           email: detail.email || "",
+          shop_slug: detail.shop_slug || "",
+          description: detail.description || "",
           year_established: String(detail.year_established || ""),
           address: detail.address || "",
           city: detail.city || "",
@@ -45,6 +50,8 @@ export default function VendorSettingsPage() {
         });
         setCurrentLogoUrl(detail.shop_logo_url || null);
         setShopLogoFile(null);
+        setSlugValidated(Boolean(detail.shop_slug && detail.shop_slug.trim().length > 0));
+        setSlugValidationMessage(detail.shop_slug ? "Current slug is already saved and accepted." : "No slug saved yet. You can leave this blank.");
       } catch (e) {
         const message = e instanceof Error ? e.message : "Failed to load shop details";
         setShopFormFeedback(message);
@@ -57,7 +64,35 @@ export default function VendorSettingsPage() {
   const handleShopFieldChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setShopForm((prev) => (prev ? { ...prev, [name]: value } : prev));
+    if (name === "shop_slug") {
+      setSlugValidationMessage(value.trim() ? "Slug changed. Please validate again before saving." : "Shop slug is required before saving.");
+      setSlugValidated(false);
+    }
     setShopFormFeedback("");
+  };
+
+  const handleValidateShopSlug = async () => {
+    if (!shopForm) return;
+    const candidate = shopForm.shop_slug.trim();
+    if (!candidate) {
+      setSlugValidationMessage("Shop slug is required before saving.");
+      setSlugValidated(false);
+      return;
+    }
+
+    setIsValidatingSlug(true);
+    setShopFormFeedback("");
+    try {
+      const response = await api.shops.validateSlug(candidate, auth?.shop_display_id);
+      setSlugValidationMessage(response.message || "Shop URL slug is available.");
+      setSlugValidated(Boolean(response.valid));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unable to validate shop slug.";
+      setSlugValidationMessage(message);
+      setSlugValidated(false);
+    } finally {
+      setIsValidatingSlug(false);
+    }
   };
 
   const handleSaveShopDetails = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -89,6 +124,14 @@ export default function VendorSettingsPage() {
       setShopFormFeedback("Phone number is required.");
       return;
     }
+    if (!shopForm.shop_slug.trim()) {
+      setShopFormFeedback("Shop slug is required before saving.");
+      return;
+    }
+    if (!slugValidated) {
+      setShopFormFeedback("Please validate the shop slug before saving.");
+      return;
+    }
 
     setIsSavingShop(true);
     setShopFormFeedback("");
@@ -97,6 +140,8 @@ export default function VendorSettingsPage() {
       await api.shops.update(auth.shop_display_id, {
         name: shopForm.name.trim(),
         email: shopForm.email.trim(),
+        shop_slug: shopForm.shop_slug.trim(),
+        description: shopForm.description.trim() || null,
         year_established: parsedYear,
         address: shopForm.address.trim(),
         city: shopForm.city.trim(),
@@ -144,7 +189,15 @@ export default function VendorSettingsPage() {
 
         {shopForm ? (
           <form onSubmit={handleSaveShopDetails} className="space-y-4">
-            <ShopEditableFields values={shopForm} onChange={handleShopFieldChange} disabled={isSavingShop} />
+            <ShopEditableFields
+              values={shopForm}
+              onChange={handleShopFieldChange}
+              onValidateSlug={handleValidateShopSlug}
+              isValidatingSlug={isValidatingSlug}
+              slugValidationMessage={slugValidationMessage}
+              slugValidated={slugValidated}
+              disabled={isSavingShop}
+            />
             <ShopLogoUploadField
               inputId="shop_logo_update"
               label="Shop Logo"

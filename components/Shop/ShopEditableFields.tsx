@@ -3,6 +3,8 @@ import React from "react";
 export type ShopEditableValues = {
   name: string;
   email: string;
+  shop_slug: string;
+  description: string;
   year_established: string;
   address: string;
   city: string;
@@ -16,10 +18,14 @@ export type ShopEditableValues = {
 type ShopEditableFieldsProps = {
   values: ShopEditableValues;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onValidateSlug?: () => void;
+  isValidatingSlug?: boolean;
+  slugValidationMessage?: string | null;
+  slugValidated?: boolean;
   disabled?: boolean;
 };
 
-export default function ShopEditableFields({ values, onChange, disabled = false }: ShopEditableFieldsProps) {
+export default function ShopEditableFields({ values, onChange, onValidateSlug, isValidatingSlug = false, slugValidationMessage, slugValidated = false, disabled = false }: ShopEditableFieldsProps) {
   return (
     <div className="space-y-3">
       <div>
@@ -54,6 +60,57 @@ export default function ShopEditableFields({ values, onChange, disabled = false 
           placeholder="Enter email"
           className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder-slate-400 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:bg-slate-100"
         />
+      </div>
+
+      <div>
+        <label htmlFor="description" className="block text-sm font-medium text-slate-700">
+          Description
+        </label>
+        <textarea
+          id="description"
+          name="description"
+          value={values.description}
+          onChange={onChange}
+          rows={4}
+          disabled={disabled}
+          placeholder="Tell customers about your shop, craftsmanship, and specialties"
+          className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder-slate-400 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:bg-slate-100"
+        />
+      </div>
+
+      <div>
+        <label htmlFor="shop_slug" className="block text-sm font-medium text-slate-700">
+          Shop URL Slug *
+        </label>
+        <div className="mt-1 flex gap-2">
+          <input
+            type="text"
+            id="shop_slug"
+            name="shop_slug"
+            value={values.shop_slug}
+            onChange={onChange}
+            required
+            disabled={disabled}
+            placeholder="mangalagiri-handloom-store"
+            className="block w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder-slate-400 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:bg-slate-100"
+          />
+          {onValidateSlug ? (
+            <button
+              type="button"
+              onClick={onValidateSlug}
+              disabled={disabled || isValidatingSlug}
+              className="rounded-md border border-slate-300 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isValidatingSlug ? "Checking..." : "Validate"}
+            </button>
+          ) : null}
+        </div>
+        <p className="mt-1 text-xs text-slate-500">Your public shop page will be /shops/{values.shop_slug || "your-slug"}</p>
+        {slugValidationMessage ? (
+          <p className={`mt-1 text-xs ${slugValidated ? "text-emerald-600" : "text-amber-600"}`}>
+            {slugValidationMessage}
+          </p>
+        ) : null}
       </div>
 
       <div>

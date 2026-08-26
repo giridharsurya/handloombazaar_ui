@@ -90,7 +90,9 @@ async function fetchShopCollections(api: ReturnType<typeof useApi>, shopId: stri
             authenticated: isManagedScope,
             page: 1,
             page_size: 20,
-            shop_display_id: collectionItem.source === "system" ? shopId : undefined,
+            shop_display_id: shopId,
+            mode: "view",
+            track_view: false,
           });
           const items = (pageData?.items || []) as ProductListItem[];
           const normalizedItems = items.map((it) => ({

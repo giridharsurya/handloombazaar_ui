@@ -23,6 +23,8 @@ export type RegisterRequest = {
   password: string;
   shop_name: string;
   email: string;
+  shop_slug?: string;
+  description?: string;
   year_established: number;
   address: string;
   city: string;
@@ -47,6 +49,8 @@ export type RegisterResponse = {
 export type ShopUpdatePayload = {
   name?: string;
   email?: string;
+  shop_slug?: string;
+  description?: string | null;
   year_established?: number;
   address?: string;
   city?: string;
@@ -296,6 +300,7 @@ export type GetShopStatusRequest = {
 
 export type ShopStatusResponse = {
   display_id: string;
+  shop_slug?: string;
   name: string;
   shop_logo_url: string;
   approved: boolean;
@@ -308,6 +313,7 @@ export type ListShopsResponse = ShopStatusResponse[];
 export type PaginatedShopsResponse = PaginatedListResponse<ShopStatusResponse>;
 
 export type ShopDetail = ShopStatusResponse & {
+  shop_slug: string;
   description: string | null;
   email: string;
   address: string;
