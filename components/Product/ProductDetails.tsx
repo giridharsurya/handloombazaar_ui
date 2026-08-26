@@ -61,6 +61,9 @@ export default function ProductDetails({
     currentProduct?.shop_name ||
     "";
 
+  const shopSlug = currentProduct?.shop?.shop_slug || shop?.shop_slug || currentShopDisplayId || "";
+  const shopHref = shopSlug ? `/shops/${encodeURIComponent(shopSlug)}` : "#";
+
   const resolveItemImage = (item: any) => {
     if (!item) return undefined;
     if (item.image_url) return item.image_url;
@@ -392,7 +395,7 @@ export default function ProductDetails({
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">{shopName}</p>
               </div>
             </div>
-            <a href={currentProduct?.shop?.shop_slug || shop?.shop_slug ? `/shops/${currentProduct?.shop?.shop_slug || shop?.shop_slug}` : '#'} className="text-sm font-medium text-rose-600 hover:underline" aria-disabled={!currentProduct?.shop?.shop_slug && !shop?.shop_slug}>
+            <a href={shopHref} className="text-sm font-medium text-rose-600 hover:underline" aria-disabled={!shopSlug}>
               Visit shop
             </a>
           </div>
