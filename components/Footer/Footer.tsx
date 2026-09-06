@@ -15,7 +15,7 @@ const communityLinks = [
 
 export default function Footer() {
   return (
-    <footer className="border-t border-rose-100 bg-[#fffaf7] text-slate-700">
+    <footer className="mt-10 border-t border-rose-100 bg-[#fffaf7] text-slate-700">
       <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr] lg:px-10">
         <div className="max-w-md">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">
