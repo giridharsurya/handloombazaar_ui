@@ -561,7 +561,11 @@ export default function ProductDetails({
           product_group_id: currentProduct.product_group_id,
           group_product_count: currentProduct.group_product_count,
           is_active: currentProduct.is_active,
-          images: currentProduct.images,
+          images: currentProduct.images?.length
+            ? currentProduct.images
+            : currentProduct.image_url
+              ? [currentProduct.image_url]
+              : [],
           attributes: (currentProduct.attributes ?? []).map((attr) => ({
             definition_id: attr.definition_id,
             name: attr.name ?? attr.option_value ?? "",
@@ -574,6 +578,7 @@ export default function ProductDetails({
           setCurrentProduct((prev: any) => ({
             ...prev,
             ...updatedProduct,
+              image_url: updatedProduct.images?.[0] ?? prev?.image_url,
             shop_display_id: prev?.shop_display_id ?? prev?.shop?.display_id,
             shop_name: prev?.shop_name ?? prev?.shop?.name,
             shop_logo_url: prev?.shop_logo_url ?? prev?.shop?.shop_logo_url,
