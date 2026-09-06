@@ -16,7 +16,7 @@ const communityLinks = [
 export default function Footer() {
   return (
     <footer className="border-t border-rose-100 bg-[#fffaf7] text-slate-700">
-      <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr] lg:px-10">
+      <div className="mx-auto grid max-w-7xl gap-10 px-6 py-14 sm:grid-cols-2 lg:grid-cols-[1.6fr_1fr_1fr_1fr] lg:px-10">
         <div className="max-w-md">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">
             Woven with meaning
@@ -65,6 +65,26 @@ export default function Footer() {
               </Link>
             ))}
           </nav>
+        </div>
+
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-950">
+            Contact
+          </h3>
+          <div className="mt-4 flex flex-col items-start gap-3 text-sm text-slate-600">
+            <a
+              href="tel:+919490704585"
+              className="transition-colors hover:text-rose-600"
+            >
+              +91 9490704585
+            </a>
+            <a
+              href="mailto:giridharsurya99@gmail.com"
+              className="transition-colors hover:text-rose-600"
+            >
+              giridharsurya99@gmail.com
+            </a>
+          </div>
         </div>
       </div>
 
