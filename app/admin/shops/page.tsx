@@ -99,6 +99,7 @@ export default function AdminShopsPage() {
           email: detail.email || "",
           shop_slug: detail.shop_slug || "",
           description: detail.description || "",
+          about_content: detail.about_content || "",
           year_established: String(detail.year_established || ""),
           address: detail.address || "",
           city: detail.city || "",
@@ -187,6 +188,7 @@ export default function AdminShopsPage() {
         email: shopForm.email.trim(),
         shop_slug: shopForm.shop_slug.trim(),
         description: shopForm.description.trim() || null,
+        about_content: shopForm.about_content.trim() || null,
         year_established: parsedYear,
         address: shopForm.address.trim(),
         city: shopForm.city.trim(),
@@ -208,6 +210,7 @@ export default function AdminShopsPage() {
         email: updated.email || "",
         shop_slug: updated.shop_slug || "",
         description: updated.description || "",
+        about_content: updated.about_content || "",
         year_established: String(updated.year_established || ""),
         address: updated.address || "",
         city: updated.city || "",
@@ -239,6 +242,15 @@ export default function AdminShopsPage() {
               <h1 className="text-xl font-semibold">Manage Shops</h1>
               <p className="mt-1 text-sm text-slate-600">Approve shops to activate them, or reject to keep them inactive.</p>
             </div>
+            {shopForm ? (
+              <button
+                type="button"
+                onClick={() => document.getElementById("about_content")?.focus()}
+                className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-700"
+              >
+                {shopForm.about_content ? "Edit About Content" : "Add About Content"}
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={loadShopsData}

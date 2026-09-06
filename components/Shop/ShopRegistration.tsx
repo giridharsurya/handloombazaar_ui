@@ -29,6 +29,7 @@ export const ShopRegistration: React.FC<ShopRegistrationProps> = ({
     email: "",
     shop_slug: "",
     description: "",
+    about_content: "",
     username: "",
     password: "",
     confirmPassword: "",

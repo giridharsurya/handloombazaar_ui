@@ -1,6 +1,36 @@
 import type { Metadata } from "next";
 import FeaturedPageClient from "./FeaturedPageClient";
 import { jsonLdScript, buildItemListJsonLd } from "@/lib/seo";
+import { getApiBaseUrl } from "@/lib/apiClient";
+import type { Collection, ProductFilterAttribute, ProductListItem } from "@/types/apiTypes";
+
+export type FeaturedInitialData = {
+  products: ProductListItem[];
+  totalProducts: number;
+  filterAttributes: ProductFilterAttribute[];
+};
+
+async function getFeaturedInitialData(): Promise<FeaturedInitialData> {
+  const baseUrl = getApiBaseUrl();
+  const [collectionsResponse, attributesResponse] = await Promise.all([
+    fetch(`${baseUrl}/api/collections?kind=system`, { cache: "no-store" }),
+    fetch(`${baseUrl}/api/products/filters/attributes`, { cache: "no-store" }),
+  ]);
+  const collectionsPayload = collectionsResponse.ok ? await collectionsResponse.json() : { items: [] };
+  const attributes = attributesResponse.ok ? await attributesResponse.json() : [];
+  const collections = (collectionsPayload.items || collectionsPayload || []) as Collection[];
+  const featured = collections.find((collection) => /featured/i.test(collection.name) || /featured/i.test(collection.display_id));
+  if (!featured) return { products: [], totalProducts: 0, filterAttributes: attributes };
+
+  const productsResponse = await fetch(`${baseUrl}/api/collections/${featured.id}/products?page=1&page_size=20&mode=view`, { cache: "no-store" });
+  const productsPayload = productsResponse.ok ? await productsResponse.json() : null;
+  const pageData = productsPayload?.data || productsPayload || {};
+  return {
+    products: (pageData.items || []).filter((item: ProductListItem) => item.is_active !== false),
+    totalProducts: pageData.total_count || 0,
+    filterAttributes: attributes,
+  };
+}
 
 export const metadata: Metadata = {
   title: "Featured Mangalagiri Sarees | Andhra Pradesh Handloom Picks",
@@ -19,7 +49,8 @@ export const metadata: Metadata = {
   ],
 };
 
-export default function FeaturedPage() {
+export default async function FeaturedPage() {
+  const initialData = await getFeaturedInitialData();
   return (
     <>
       <script
@@ -35,7 +66,7 @@ export default function FeaturedPage() {
           ),
         }}
       />
-      <FeaturedPageClient />
+      <FeaturedPageClient initialData={initialData} />
     </>
   );
 }

@@ -51,6 +51,7 @@ export type ShopUpdatePayload = {
   email?: string;
   shop_slug?: string;
   description?: string | null;
+  about_content?: string | null;
   year_established?: number;
   address?: string;
   city?: string;
@@ -315,6 +316,7 @@ export type PaginatedShopsResponse = PaginatedListResponse<ShopStatusResponse>;
 export type ShopDetail = ShopStatusResponse & {
   shop_slug: string;
   description: string | null;
+  about_content: string | null;
   email: string;
   address: string;
   city: string | null;

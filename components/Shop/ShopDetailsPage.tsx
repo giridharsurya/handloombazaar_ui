@@ -16,7 +16,7 @@ import { useProductActions } from "@/lib/productActions";
 import { useApi } from "@/lib/ApiProvider";
 import { useVariantSelection } from "@/lib/VariantSelectionContext";
 
-type ShopCollectionItem = {
+export type ShopCollectionItem = {
   id: number;
   source: "shop" | "system";
   display_id?: string;
@@ -29,11 +29,19 @@ type ShopCollectionItem = {
   updated_at?: string | null;
 };
 
-type CollectionMemberItem = ProductListItem & { id: string };
+export type CollectionMemberItem = ProductListItem & { id: string };
+
+export type ShopDetailsInitialData = {
+  collections: ShopCollectionItem[];
+  collectionMembers: Record<string, CollectionMemberItem[]>;
+  announcements: AnnouncementBanner[];
+  filterAttributes: ProductFilterAttribute[];
+};
 
 type ShopDetailsPageProps = {
   shop: ShopDetail;
   products: ProductListItem[];
+  initialData?: ShopDetailsInitialData;
   scope?: string;
   actionsSidebar?: React.ReactNode;
 };
@@ -177,7 +185,7 @@ async function fetchFilterAttributes(api: ReturnType<typeof useApi>) {
   }
 }
 
-export default function ShopDetailsPage({ shop, products, scope, actionsSidebar }: ShopDetailsPageProps) {
+export default function ShopDetailsPage({ shop, products, initialData, scope, actionsSidebar }: ShopDetailsPageProps) {
   const [displayProducts, setDisplayProducts] = useState<ProductListItem[]>(products);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
@@ -197,11 +205,11 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
   const productsSectionRef = useRef<HTMLElement | null>(null);
-  const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>([]);
-  const [collections, setCollections] = useState<ShopCollectionItem[]>([]);
+  const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>(initialData?.filterAttributes || []);
+  const [collections, setCollections] = useState<ShopCollectionItem[]>(initialData?.collections || []);
   const [loadingCollections, setLoadingCollections] = useState(false);
-  const [collectionMembers, setCollectionMembers] = useState<Record<string, CollectionMemberItem[]>>({});
-  const [shopAnnouncements, setShopAnnouncements] = useState<AnnouncementBanner[]>([]);
+  const [collectionMembers, setCollectionMembers] = useState<Record<string, CollectionMemberItem[]>>(initialData?.collectionMembers || {});
+  const [shopAnnouncements, setShopAnnouncements] = useState<AnnouncementBanner[]>(initialData?.announcements || []);
   const [serverProducts, setServerProducts] = useState<ProductListItem[]>([]);
   const [serverTotalProducts, setServerTotalProducts] = useState(0);
   const [serverLoadingProducts, setServerLoadingProducts] = useState(false);
@@ -419,6 +427,8 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
   }, [products]);
 
   useEffect(() => {
+    if (initialData && !isManagedScope && sortBy === "newest") return;
+
     let mounted = true;
 
     const loadCollectionsAndMembers = async () => {
@@ -449,9 +459,11 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     return () => {
       mounted = false;
     };
-  }, [api, shop.display_id, isManagedScope, sortBy]);
+  }, [api, shop.display_id, isManagedScope, sortBy, initialData]);
 
   useEffect(() => {
+    if (initialData && !isManagedScope) return;
+
     let mounted = true;
 
     const loadAnnouncements = async () => {
@@ -469,9 +481,11 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     return () => {
       mounted = false;
     };
-  }, [api, shop.display_id]);
+  }, [api, shop.display_id, isManagedScope, initialData]);
 
   useEffect(() => {
+    if (initialData && !isManagedScope) return;
+
     let mounted = true;
 
     const loadFilterAttributes = async () => {
@@ -489,7 +503,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
     return () => {
       mounted = false;
     };
-  }, [api]);
+  }, [api, isManagedScope, initialData]);
 
   useEffect(() => {
     const getStickyTop = () => {
@@ -530,7 +544,7 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
   ];
 
   const homeBannerItems = useMemo(
-    () => shopAnnouncements.filter((banner) => banner.is_active && (banner.is_visible_in_shop ?? true)),
+    () => (Array.isArray(shopAnnouncements) ? shopAnnouncements : []).filter((banner) => banner.is_active && (banner.is_visible_in_shop ?? true)),
     [shopAnnouncements]
   );
 
@@ -846,37 +860,49 @@ export default function ShopDetailsPage({ shop, products, scope, actionsSidebar 
 
       {activeTab === "about" ? (
         <section className="px-4 pb-8">
-          <div className="mx-auto max-w-5xl rounded-2xl border border-gray-200 bg-white p-6 dark:border-gray-800 dark:bg-gray-900">
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">About {shop.name}</h2>
-            <p className="mt-3 text-sm leading-7 text-gray-700 dark:text-gray-300">{shop.description || "No description available."}</p>
+          <div className="w-full overflow-hidden rounded-[2rem] border border-stone-200 bg-[#fbfaf7] shadow-sm dark:border-gray-800 dark:bg-gray-900">
+            <div className="grid lg:grid-cols-[1.25fr_0.75fr]">
+              <article className="p-7 sm:p-10 lg:p-14">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-rose-600">The story behind the weave</p>
+                <h2 className="mt-4 max-w-2xl font-serif text-3xl font-semibold leading-tight text-stone-900 dark:text-white sm:text-4xl">
+                  About {shop.name}
+                </h2>
+                <div className="mt-7 max-w-4xl whitespace-pre-line text-base leading-8 text-stone-700 dark:text-gray-300">
+                  {shop.about_content || shop.description || "This shop is building its story. Check back soon to learn more about its craft and people."}
+                </div>
+              </article>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <aside className="border-t border-stone-200 bg-white/70 p-7 dark:border-gray-800 dark:bg-gray-950/30 sm:p-10 lg:border-l lg:border-t-0">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-stone-500">At a glance</p>
+                <div className="mt-6 space-y-5">
               {aboutRows.map((row) => (
-                <div key={row.label} className="rounded-lg border border-gray-200 px-3 py-2 dark:border-gray-800">
-                  <p className="text-xs uppercase tracking-wide text-gray-500">{row.label}</p>
-                  <p className="mt-1 text-sm font-medium text-gray-900 dark:text-white">{row.value}</p>
+                <div key={row.label} className="border-b border-stone-200 pb-4 last:border-0 dark:border-gray-800">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">{row.label}</p>
+                  <p className="mt-1 text-sm font-medium leading-6 text-stone-900 dark:text-white">{row.value}</p>
                 </div>
               ))}
+                </div>
+              </aside>
             </div>
 
-            <div className="mt-5 rounded-lg border border-gray-200 px-3 py-3 dark:border-gray-800">
-              <p className="text-xs uppercase tracking-wide text-gray-500">Social Media</p>
+            <div className="border-t border-stone-200 px-7 py-5 sm:px-10 dark:border-gray-800">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-500">Connect with the shop</p>
               {socialLinks.length > 0 ? (
-                <div className="mt-2 flex flex-wrap gap-3">
+                <div className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
                   {socialLinks.map((link) => (
                     <a
                       key={link.label}
                       href={link.url!}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-sm font-medium text-rose-600 hover:underline"
+                      className="text-sm font-semibold text-rose-600 hover:text-rose-800 hover:underline"
                     >
                       {link.label}
                     </a>
                   ))}
                 </div>
               ) : (
-                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">No social media links available.</p>
+                <p className="mt-2 text-sm text-stone-500 dark:text-gray-400">Social links will appear here when available.</p>
               )}
             </div>
           </div>

@@ -1,6 +1,8 @@
 import type { MetadataRoute } from "next";
+import { getApiBaseUrl } from "@/lib/apiClient";
 
 const baseUrl = "https://www.handloomstores.com";
+const apiBaseUrl = getApiBaseUrl();
 
 async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
   const publicEntries: MetadataRoute.Sitemap = [
@@ -13,24 +15,36 @@ async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {
 
   try {
     const [shopsResponse, collectionsResponse, productsResponse] = await Promise.all([
-      fetch(`${baseUrl}/api/shops`, { cache: "no-store" }),
-      fetch(`${baseUrl}/api/collections?kind=system`, { cache: "no-store" }),
-      fetch(`${baseUrl}/api/products?page=1&page_size=200`, { cache: "no-store" }),
+      fetch(`${apiBaseUrl}/api/shops?page=1&page_size=100`, { cache: "no-store" }),
+      fetch(`${apiBaseUrl}/api/collections?kind=system`, { cache: "no-store" }),
+      fetch(`${apiBaseUrl}/api/products?page=1&page_size=200`, { cache: "no-store" }),
     ]);
 
     if (shopsResponse.ok) {
-      const shops = await shopsResponse.json();
-      const items = Array.isArray(shops?.items) ? shops.items : Array.isArray(shops) ? shops : [];
-      items.forEach((shop: any) => {
-        const shopSlug = shop?.shop_slug;
-        if (shopSlug) {
-          publicEntries.push({
-            url: `${baseUrl}/shops/${encodeURIComponent(shopSlug)}`,
-            lastModified: new Date(),
-            changeFrequency: "weekly",
-            priority: 0.7,
-          });
-        }
+      const firstPage = await shopsResponse.json();
+      const shopPages = [firstPage];
+
+      for (let page = 2; firstPage?.has_next; page += 1) {
+        const pageResponse = await fetch(`${apiBaseUrl}/api/shops?page=${page}&page_size=100`, { cache: "no-store" });
+        if (!pageResponse.ok) break;
+        const nextPage = await pageResponse.json();
+        shopPages.push(nextPage);
+        if (!nextPage?.has_next) break;
+      }
+
+      shopPages.forEach((shops) => {
+        const items = Array.isArray(shops?.items) ? shops.items : Array.isArray(shops) ? shops : [];
+        items.forEach((shop: any) => {
+          const shopSlug = shop?.shop_slug;
+          if (shopSlug) {
+            publicEntries.push({
+              url: `${baseUrl}/shops/${encodeURIComponent(shopSlug)}`,
+              lastModified: new Date(),
+              changeFrequency: "weekly",
+              priority: 0.7,
+            });
+          }
+        });
       });
     }
 

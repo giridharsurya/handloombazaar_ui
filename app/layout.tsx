@@ -9,6 +9,7 @@ import { ProductSelectionProvider } from "@/lib/productSelection";
 import { ProductActionsProvider } from "@/lib/productActions";
 import ApiLoadingProvider from "@/lib/LoadingProvider";
 import GlobalLoader from "@/components/GlobalLoader";
+import Footer from "@/components/Footer/Footer";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -65,7 +66,7 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full overflow-x-hidden">
+      <body suppressHydrationWarning className="min-h-full overflow-x-hidden">
         <ApiProvider>
           <AuthProvider>
             <ApiLoadingProvider>
@@ -77,6 +78,7 @@ export default function RootLayout({
                 <ProductActionsProvider>
                   <div style={{ paddingTop: "var(--app-header-height, 120px)" }}>
                     {children}
+                    <Footer />
                   </div>
                 </ProductActionsProvider>
               </ProductSelectionProvider>

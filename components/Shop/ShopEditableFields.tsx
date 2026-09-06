@@ -5,6 +5,7 @@ export type ShopEditableValues = {
   email: string;
   shop_slug: string;
   description: string;
+  about_content: string;
   year_established: string;
   address: string;
   city: string;
@@ -76,6 +77,24 @@ export default function ShopEditableFields({ values, onChange, onValidateSlug, i
           placeholder="Tell customers about your shop, craftsmanship, and specialties"
           className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder-slate-400 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:bg-slate-100"
         />
+      </div>
+
+      <div>
+        <label htmlFor="about_content" className="block text-sm font-medium text-slate-700">
+          About Your Shop
+        </label>
+        <textarea
+          id="about_content"
+          name="about_content"
+          value={values.about_content}
+          onChange={onChange}
+          rows={10}
+          maxLength={10000}
+          disabled={disabled}
+          placeholder="Share your story, weaving tradition, people, process, and what makes your shop special."
+          className="mt-1 block w-full rounded-md border border-slate-300 px-3 py-2 text-sm leading-6 placeholder-slate-400 shadow-sm focus:border-slate-500 focus:outline-none focus:ring-1 focus:ring-slate-500 disabled:bg-slate-100"
+        />
+        <p className="mt-1 text-xs text-slate-500">This appears in the public About section of your shop page.</p>
       </div>
 
       <div>

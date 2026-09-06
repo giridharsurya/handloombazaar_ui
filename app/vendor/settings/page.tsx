@@ -39,6 +39,7 @@ export default function VendorSettingsPage() {
           email: detail.email || "",
           shop_slug: detail.shop_slug || "",
           description: detail.description || "",
+          about_content: detail.about_content || "",
           year_established: String(detail.year_established || ""),
           address: detail.address || "",
           city: detail.city || "",
@@ -142,6 +143,7 @@ export default function VendorSettingsPage() {
         email: shopForm.email.trim(),
         shop_slug: shopForm.shop_slug.trim(),
         description: shopForm.description.trim() || null,
+        about_content: shopForm.about_content.trim() || null,
         year_established: parsedYear,
         address: shopForm.address.trim(),
         city: shopForm.city.trim(),
@@ -183,8 +185,19 @@ export default function VendorSettingsPage() {
     <div className="min-h-screen bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-slate-900">Shop Settings</h1>
-          <p className="mt-2 text-sm text-slate-600">Update your shop profile information here.</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900">Shop Settings</h1>
+              <p className="mt-2 text-sm text-slate-600">Update your shop profile information here.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => document.getElementById("about_content")?.focus()}
+              className="rounded-md bg-rose-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-700"
+            >
+              {shopForm?.about_content ? "Edit About Content" : "Add About Content"}
+            </button>
+          </div>
         </div>
 
         {shopForm ? (

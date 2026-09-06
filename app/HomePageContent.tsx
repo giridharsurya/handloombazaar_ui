@@ -9,7 +9,8 @@ import Ribbon from "@/components/Ribbon/Ribbon";
 import AnnouncementsRibbon from "@/components/Ribbon/AnnouncementsRibbon";
 import Product from "@/components/Product/Product";
 import api from "@/lib/api";
-import type { AnnouncementBanner, Collection, ProductListItem, ShopStatusResponse } from "@/types/apiTypes";
+import type { AnnouncementBanner, ProductListItem } from "@/types/apiTypes";
+import type { HomepageData } from "./page";
 
 type HomeShopItem = {
   display_id: string;
@@ -18,18 +19,19 @@ type HomeShopItem = {
   shop_logo_url: string;
 };
 
-type HomepageRibbonRow = {
-  collection: Collection;
-  items: ProductListItem[];
+type HomepageRibbonRow = HomepageData["homepageRibbonRows"][number];
+
+type HomePageContentProps = {
+  initialData: HomepageData;
 };
 
-export default function HomePageContent() {
+export default function HomePageContent({ initialData }: HomePageContentProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const [shops, setShops] = useState<HomeShopItem[]>([]);
-  const [announcements, setAnnouncements] = useState<AnnouncementBanner[]>([]);
-  const [homepageRibbonRows, setHomepageRibbonRows] = useState<HomepageRibbonRow[]>([]);
-  const [latestProducts, setLatestProducts] = useState<ProductListItem[]>([]);
+  const [shops] = useState<HomeShopItem[]>(initialData.shops);
+  const [announcements] = useState<AnnouncementBanner[]>(initialData.announcements);
+  const [homepageRibbonRows] = useState<HomepageRibbonRow[]>(initialData.homepageRibbonRows);
+  const [latestProducts] = useState<ProductListItem[]>(initialData.latestProducts);
 
   const handleAnnouncementClick = (item: AnnouncementBanner) => {
     const target = item.target ?? "/";
@@ -46,80 +48,9 @@ export default function HomePageContent() {
 
   useEffect(() => {
     if (pathname !== "/") return;
-
-    let mounted = true;
-
-    void (async () => {
-      try {
-        await api.analytics.trackHomepageVisit();
-      } catch (error) {
-        console.error("Failed to track homepage visit", error);
-      }
-
-      try {
-        const rows = await api.shops.list({ sort_by: "newest", page: 1, page_size: 20 });
-        if (!mounted) return;
-        const validShops = (rows || []).filter((shop: ShopStatusResponse) => Boolean(shop?.shop_slug));
-        setShops(
-          validShops.map((shop: ShopStatusResponse) => ({
-            display_id: shop.display_id,
-            shop_slug: shop.shop_slug,
-            name: shop.name,
-            shop_logo_url: shop.shop_logo_url,
-          }))
-        );
-      } catch (error) {
-        console.error("Failed to load shops", error);
-      }
-
-      try {
-        const rows = await api.announcements.list();
-        if (!mounted) return;
-        setAnnouncements((rows || []).filter((item) => item.banner_scope === "system"));
-      } catch (error) {
-        console.error("Failed to load announcements", error);
-      }
-
-      try {
-        const collections = (await api.collections.list({ kind: "system", display_on_homepage: true, authenticated: false })) as Collection[];
-        const rows = await Promise.all(
-          collections.map(async (collection) => {
-            try {
-              const pageData = await api.collections.getProductsPage(collection.id, {
-                authenticated: false,
-                page: 1,
-                page_size: 20,
-              });
-              return {
-                collection,
-                items: (pageData.items || []).filter((item) => item.is_active !== false),
-              };
-            } catch {
-              console.error("Failed to load products for collection", collection.id);
-              return { collection, items: [] };
-            }
-          })
-        );
-        if (!mounted) return;
-        setHomepageRibbonRows(rows || []);
-      } catch (error) {
-        console.error("Failed to load homepage collections", error);
-        if (!mounted) return;
-        setHomepageRibbonRows([]);
-      }
-
-      try {
-        const pageData = await api.products.getProductsPage({ page: 1, page_size: 20 });
-        if (!mounted) return;
-        setLatestProducts(pageData.items || []);
-      } catch (error) {
-        console.error("Failed to load latest products", error);
-      }
-    })();
-
-    return () => {
-      mounted = false;
-    };
+    void api.analytics.trackHomepageVisit().catch((error) => {
+      console.error("Failed to track homepage visit", error);
+    });
   }, [pathname]);
 
   return (

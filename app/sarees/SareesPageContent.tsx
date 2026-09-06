@@ -9,8 +9,9 @@ import SelectionToolbar from "@/components/Product/SelectionToolbar";
 import SareesFilter, { FilterState } from "@/components/Filters/SareesFilter";
 import FilterHeader from "@/components/FilterHeader/FilterHeader";
 import Pagination from "@/components/Product/Pagination";
+import type { SareesInitialData } from "./page";
 
-export default function SareesPageContent() {
+export default function SareesPageContent({ initialData }: { initialData: SareesInitialData }) {
   const searchParams = useSearchParams();
   const collectionIdParam = searchParams.get("collection_id");
   const shopDisplayIdParam = searchParams.get("shop_display_id");
@@ -32,11 +33,11 @@ export default function SareesPageContent() {
   const [isHeaderSticky, setIsHeaderSticky] = useState(true);
   const sidebarRef = useRef<HTMLElement | null>(null);
 
-  const [pageProducts, setPageProducts] = useState<ProductListItem[]>([]);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [pageProducts, setPageProducts] = useState<ProductListItem[]>(initialData.products);
+  const [totalProducts, setTotalProducts] = useState(initialData.totalProducts);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const [productsError, setProductsError] = useState("");
-  const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>([]);
+  const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>(initialData.filterAttributes);
   const [collectionFilterName, setCollectionFilterName] = useState<string | null>(null);
 
   const api = useApi();
@@ -56,6 +57,19 @@ export default function SareesPageContent() {
   };
 
   useEffect(() => {
+    if (
+      !collectionIdParam &&
+      !shopDisplayIdParam &&
+      !productGroupIdParam &&
+      !searchParam &&
+      attributeFiltersParam.length === 0 &&
+      currentPage === 1 &&
+      sortBy === "newest" &&
+      selectedAttributeOptionIds.length === 0 &&
+      filters.priceRange[0] === 0 &&
+      filters.priceRange[1] === 25000
+    ) return;
+
     const getStickyTop = () => {
       const rootStyles = getComputedStyle(document.documentElement);
       const appHeaderHeight = Number.parseFloat(rootStyles.getPropertyValue("--app-header-height")) || 120;
@@ -84,6 +98,8 @@ export default function SareesPageContent() {
   }, [showFilters]);
 
   useEffect(() => {
+    if (initialData.filterAttributes.length > 0) return;
+
     let cancelled = false;
 
     const loadProducts = async () => {

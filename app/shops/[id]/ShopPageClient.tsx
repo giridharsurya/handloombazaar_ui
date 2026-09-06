@@ -6,16 +6,27 @@ import ShopDetailsPage from "@/components/Shop/ShopDetailsPage";
 import { VariantSelectionProvider } from "@/lib/VariantSelectionContext";
 import api from "@/lib/api";
 import type { ProductListItem, ShopDetail } from "@/types/apiTypes";
+import type { ShopDetailsInitialData } from "@/components/Shop/ShopDetailsPage";
 
-export default function ShopPageClient() {
+type ShopPageClientProps = {
+  initialShop?: ShopDetail;
+  initialProducts?: ProductListItem[];
+  initialData?: ShopDetailsInitialData;
+};
+
+export default function ShopPageClient({ initialShop, initialProducts = [], initialData }: ShopPageClientProps) {
   const params = useParams();
   const displayId = typeof params?.id === "string" ? params.id : undefined;
-  const [shop, setShop] = useState<ShopDetail | null>(null);
-  const [products, setProducts] = useState<ProductListItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [shop, setShop] = useState<ShopDetail | null>(initialShop || null);
+  const [products, setProducts] = useState<ProductListItem[]>(initialProducts);
+  const [loading, setLoading] = useState(!initialShop);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (initialShop && initialShop.shop_slug === displayId) {
+      return;
+    }
+
     if (!displayId) {
       setError("Invalid shop id.");
       setLoading(false);
@@ -50,7 +61,7 @@ export default function ShopPageClient() {
     return () => {
       mounted = false;
     };
-  }, [displayId]);
+  }, [displayId, initialShop]);
 
   if (loading) {
     return <div className="px-4 py-6 text-sm text-slate-600">Loading shop...</div>;
@@ -62,7 +73,7 @@ export default function ShopPageClient() {
 
   return (
     <VariantSelectionProvider>
-      <ShopDetailsPage shop={shop} products={products} scope={"public"} />
+      <ShopDetailsPage shop={shop} products={products} initialData={initialData} scope={"public"} />
     </VariantSelectionProvider>
   );
 }

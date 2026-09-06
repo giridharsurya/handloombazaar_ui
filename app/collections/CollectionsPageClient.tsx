@@ -9,6 +9,7 @@ import Pagination from "@/components/Product/Pagination";
 import Ribbon from "@/components/Ribbon/Ribbon";
 import Product from "@/components/Product/Product";
 import type { Collection, ProductListItem } from "@/types/apiTypes";
+import type { CollectionsInitialData } from "./page";
 
 type RibbonProduct = ProductListItem & { id: string };
 
@@ -17,18 +18,18 @@ type CollectionRibbonRow = {
   items: RibbonProduct[];
 };
 
-export default function CollectionsPageClient() {
+export default function CollectionsPageClient({ initialData }: { initialData: CollectionsInitialData }) {
   const api = useApi();
   const { auth } = useAuth();
   const isAdmin = auth?.role === "admin";
 
-  const [collections, setCollections] = useState<Collection[]>([]);
-  const [collectionMembers, setCollectionMembers] = useState<Record<number, RibbonProduct[]>>({});
+  const [collections, setCollections] = useState<Collection[]>(initialData.collections);
+  const [collectionMembers, setCollectionMembers] = useState<Record<number, RibbonProduct[]>>(initialData.collectionMembers);
   const [sortBy, setSortBy] = useState<"newest" | "most-viewed" | "product-count">("newest");
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalCollections, setTotalCollections] = useState(0);
+  const [totalCollections, setTotalCollections] = useState(initialData.totalCollections);
   const itemsPerPage = 20;
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const handleSortChange = (sort: "price-low" | "price-high" | "newest" | "most-viewed" | "product-count") => {
@@ -39,6 +40,8 @@ export default function CollectionsPageClient() {
   };
 
   useEffect(() => {
+    if (sortBy === "newest" && currentPage === 1) return;
+
     let cancelled = false;
 
     const load = async () => {

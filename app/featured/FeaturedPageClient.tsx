@@ -7,8 +7,9 @@ import FilterHeader from "@/components/FilterHeader/FilterHeader";
 import Pagination from "@/components/Product/Pagination";
 import { Collection, ProductFilterAttribute, ProductListItem } from "@/types/apiTypes";
 import { useApi } from "@/lib/ApiProvider";
+import type { FeaturedInitialData } from "./page";
 
-export default function FeaturedPageClient() {
+export default function FeaturedPageClient({ initialData }: { initialData: FeaturedInitialData }) {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
@@ -17,16 +18,16 @@ export default function FeaturedPageClient() {
     selectedAttributeOptionIds: {},
   });
   const [sortBy, setSortBy] = useState<"price-low" | "price-high" | "newest" | "most-viewed">("newest");
-  const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>([]);
+  const [filterAttributes, setFilterAttributes] = useState<ProductFilterAttribute[]>(initialData.filterAttributes);
 
   const handleSortChange = (sort: "price-low" | "price-high" | "newest" | "most-viewed" | "product-count") => {
     if (sort === "product-count") return;
     setSortBy(sort);
     setCurrentPage(1);
   };
-  const [pageProducts, setPageProducts] = useState<ProductListItem[]>([]);
-  const [totalProducts, setTotalProducts] = useState(0);
-  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [pageProducts, setPageProducts] = useState<ProductListItem[]>(initialData.products);
+  const [totalProducts, setTotalProducts] = useState(initialData.totalProducts);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const [productsError, setProductsError] = useState("");
 
   const [showFilters, setShowFilters] = useState(true);
@@ -45,6 +46,8 @@ export default function FeaturedPageClient() {
   );
 
   useEffect(() => {
+    if (currentPage === 1 && sortBy === "newest" && selectedAttributeOptionIds.length === 0 && filters.priceRange[0] === 0 && filters.priceRange[1] === 25000) return;
+
     const getStickyTop = () => {
       const rootStyles = getComputedStyle(document.documentElement);
       const appHeaderHeight = Number.parseFloat(rootStyles.getPropertyValue("--app-header-height")) || 120;
@@ -74,6 +77,8 @@ export default function FeaturedPageClient() {
   }, [showFilters]);
 
   useEffect(() => {
+    if (initialData.filterAttributes.length > 0) return;
+
     let cancelled = false;
 
     const loadProducts = async () => {

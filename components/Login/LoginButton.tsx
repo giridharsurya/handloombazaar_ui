@@ -8,8 +8,13 @@ import { useAuth } from "@/lib/AuthContext";
 export const LoginButton: React.FC = () => {
   const { isAuthenticated, auth, logout } = useAuth();
   const router = useRouter();
+  const [mounted, setMounted] = React.useState(false);
   const [menuOpen, setMenuOpen] = React.useState(false);
   const menuRef = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   React.useEffect(() => {
     if (!menuOpen) return;
@@ -32,7 +37,7 @@ export const LoginButton: React.FC = () => {
         ? "/admin"
         : null;
 
-  if (isAuthenticated && auth) {
+  if (mounted && isAuthenticated && auth) {
     return (
       <div ref={menuRef} className="relative z-30">
         <button
