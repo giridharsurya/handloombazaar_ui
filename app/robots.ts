@@ -13,6 +13,6 @@ export default function robots(): MetadataRoute.Robots {
         "/_next/",
       ],
     },
-    sitemap: "https://www.handloomstores.com/sitemap.xml",
+    sitemap: "https://handloomstores.com/sitemap.xml",
   };
 }

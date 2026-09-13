@@ -57,7 +57,7 @@ export default async function SareesPage({ searchParams }: { searchParams: Promi
             buildItemListJsonLd({
               name: "Handloom Sarees",
               description: metadata.description || "Authentic handloom sarees and artisan textiles.",
-              url: "https://www.handloomstores.com/sarees",
+              url: "https://handloomstores.com/sarees",
               itemCount: 0,
             })
           ),

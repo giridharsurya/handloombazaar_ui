@@ -61,7 +61,7 @@ export default async function CollectionPage({ params }: { params: Promise<{ id:
               buildCollectionJsonLd({
                 name: collection.name,
                 description: collection.description,
-                url: `https://www.handloomstores.com/collections/${encodeURIComponent(id)}`,
+                url: `https://handloomstores.com/collections/${encodeURIComponent(id)}`,
                 image: collection.image_url,
               })
             ),

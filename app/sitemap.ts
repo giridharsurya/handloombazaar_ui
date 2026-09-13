@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 import { getApiBaseUrl } from "@/lib/apiClient";
 
-const baseUrl = "https://www.handloomstores.com";
+const baseUrl = "https://handloomstores.com";
 const apiBaseUrl = getApiBaseUrl();
 
 async function getSitemapEntries(): Promise<MetadataRoute.Sitemap> {

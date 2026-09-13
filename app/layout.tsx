@@ -22,7 +22,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.handloomstores.com"),
+  metadataBase: new URL("https://handloomstores.com"),
   title: {
     default: "Mangalagiri Handloom Sarees | Andhra Pradesh Handloom Stores",
     template: "%s | Handloom Stores",

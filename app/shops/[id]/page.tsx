@@ -116,7 +116,7 @@ export default async function ShopPage({ params }: { params: Promise<{ id: strin
       redirect(`/shops/${encodeURIComponent(shop.shop_slug)}`);
     }
 
-    const shopUrl = `https://www.handloomstores.com/shops/${encodeURIComponent(shop.shop_slug || id)}`;
+    const shopUrl = `https://handloomstores.com/shops/${encodeURIComponent(shop.shop_slug || id)}`;
 
     return (
       <>

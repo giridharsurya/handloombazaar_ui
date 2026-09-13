@@ -60,7 +60,7 @@ export default async function FeaturedPage() {
             buildItemListJsonLd({
               name: "Featured Mangalagiri Sarees",
               description: metadata.description || "Featured Mangalagiri handloom sarees and Andhra Pradesh cotton weaves from local weaving heritage.",
-              url: "https://www.handloomstores.com/featured",
+              url: "https://handloomstores.com/featured",
               itemCount: 0,
             })
           ),

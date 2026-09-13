@@ -86,7 +86,7 @@ export default async function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{
           __html: jsonLdScript(
-            buildWebSiteJsonLd({ url: "https://www.handloomstores.com/", description: metadata.description || undefined })
+            buildWebSiteJsonLd({ url: "https://handloomstores.com/", description: metadata.description || undefined })
           ),
         }}
       />

@@ -21,7 +21,7 @@ export default function ShopsPage() {
             buildItemListJsonLd({
               name: "Mangalagiri Handloom Stores",
               description: metadata.description || "Curated Mangalagiri handloom stores and Andhra Pradesh weaving shops for authentic cotton sarees.",
-              url: "https://www.handloomstores.com/shops",
+              url: "https://handloomstores.com/shops",
               itemCount: 0,
             })
           ),

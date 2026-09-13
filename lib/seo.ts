@@ -23,12 +23,12 @@ export function buildWebSiteJsonLd({
     publisher: {
       "@type": "Organization",
       name: "Handloom Stores",
-      url: "https://www.handloomstores.com",
-      logo: "https://www.handloomstores.com/images/logo.png",
+      url: "https://handloomstores.com",
+      logo: "https://handloomstores.com/images/logo.png",
     },
     potentialAction: {
       "@type": "SearchAction",
-      target: "https://www.handloomstores.com/sarees?search={search_term_string}",
+      target: "https://handloomstores.com/sarees?search={search_term_string}",
       "query-input": "required name=search_term_string",
     },
   };
@@ -237,7 +237,7 @@ export function buildEntityMetadata({
       .map((value) => value.trim())
       .filter((value) => value.length > 0)
   )].slice(0, 25);
-  const canonicalUrl = new URL(path, "https://www.handloomstores.com").toString();
+  const canonicalUrl = new URL(path, "https://handloomstores.com").toString();
 
   return {
     title,

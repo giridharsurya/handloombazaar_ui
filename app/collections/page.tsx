@@ -58,7 +58,7 @@ export default async function CollectionsPage() {
             buildItemListJsonLd({
               name: "Mangalagiri Collections",
               description: metadata.description || "Curated Mangalagiri handloom collections and Andhra Pradesh textile stories for heritage cotton sarees.",
-              url: "https://www.handloomstores.com/collections",
+              url: "https://handloomstores.com/collections",
               itemCount: 0,
             })
           ),

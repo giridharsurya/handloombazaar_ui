@@ -49,7 +49,7 @@ export default async function SareeDetailsPage({ params }: { params: Promise<{ i
     const { id } = await params;
     const payload = await fetchPublicJson<{ product: { name: string; description?: string | null; price?: number | null; image_url?: string | null; shop?: { name?: string; display_id?: string; city?: string | null; address?: string | null }; attributes?: Array<{ name?: string; value?: string }> } }>(`/api/products/${encodeURIComponent(id)}`);
     const product = payload.product;
-    const productUrl = `https://www.handloomstores.com/sarees/${encodeURIComponent(id)}`;
+    const productUrl = `https://handloomstores.com/sarees/${encodeURIComponent(id)}`;
 
     return (
       <>
