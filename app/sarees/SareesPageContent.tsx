@@ -98,8 +98,6 @@ export default function SareesPageContent({ initialData }: { initialData: Sarees
   }, [showFilters]);
 
   useEffect(() => {
-    if (initialData.filterAttributes.length > 0) return;
-
     let cancelled = false;
 
     const loadProducts = async () => {
@@ -147,18 +145,6 @@ export default function SareesPageContent({ initialData }: { initialData: Sarees
             shop_display_id: shopDisplayIdParam,
           });
 
-          if (pageData.items.length === 0) {
-            pageData = await api.products.getProductsPage({
-              authenticated: false,
-              page: currentPage,
-              page_size: itemsPerPage,
-              min_price: filters.priceRange[0],
-              max_price: filters.priceRange[1],
-              sort_by: "newest",
-              attribute_option_ids: selectedAttributeOptionIds,
-              shop_display_id: shopDisplayIdParam,
-            });
-          }
         } else if (collectionIdParam) {
           const numericCollectionId = Number(collectionIdParam);
           if (Number.isFinite(numericCollectionId)) {
@@ -200,17 +186,6 @@ export default function SareesPageContent({ initialData }: { initialData: Sarees
             attribute_filters: requestedAttributeFilters,
           });
 
-          if (!searchParam && pageData.items.length === 0) {
-            pageData = await api.products.getProductsPage({
-              authenticated: false,
-              page: currentPage,
-              page_size: itemsPerPage,
-              min_price: filters.priceRange[0],
-              max_price: filters.priceRange[1],
-              sort_by: "newest",
-              attribute_option_ids: selectedAttributeOptionIds,
-            });
-          }
         }
 
         if (cancelled) return;

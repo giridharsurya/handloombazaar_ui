@@ -31,7 +31,7 @@ export default function SearchBar({
       <label className="relative block">
         <span className="sr-only">Search</span>
         <input
-          className="block w-full rounded-full border border-gray-300 bg-white py-3 px-4 pl-10 text-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rose-200"
+          className="block w-full rounded-full border border-gray-300 bg-white py-3 px-4 pl-10 text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-rose-200 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-400"
           placeholder={placeholder}
           type="search"
           value={internalValue}
