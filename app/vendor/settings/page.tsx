@@ -182,7 +182,7 @@ export default function VendorSettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
+    <div className="vendor-theme min-h-screen bg-slate-50 px-4 py-12 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-3xl rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mb-6">
           <div className="flex flex-wrap items-start justify-between gap-3">

@@ -144,7 +144,7 @@ export default function AdminShopProductsPage() {
 
   return (
     <VariantSelectionProvider>
-      <div className="px-4 py-4">
+      <div className="admin-theme px-4 py-4">
         <section className="mb-4 rounded-lg border border-slate-200 bg-white p-4">
           <h1 className="text-xl font-semibold text-slate-900">Manage Shop Products and Collections</h1>
           <p className="mt-1 text-sm text-slate-600">

@@ -200,7 +200,7 @@ function SystemCollectionProductsInner() {
   }
 
   return (
-    <main className="min-h-screen bg-white dark:bg-gray-950">
+    <main className="collection-theme min-h-screen bg-white dark:bg-gray-950">
       <section>
         <FilterHeader
           pageTitle={`Collections - ${collection.name}`}

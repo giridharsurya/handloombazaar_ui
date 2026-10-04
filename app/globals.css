@@ -56,6 +56,40 @@
   .text-stone-400:not([class*="dark:"]) {
     color: #94a3b8;
   }
+
+  :is(.admin-theme, .vendor-theme, .auth-theme, .collection-theme, .shop-theme).bg-slate-50,
+  :is(.admin-theme, .vendor-theme, .auth-theme, .collection-theme, .shop-theme) .bg-slate-50:not([class*="dark:"]) {
+    background-color: #111827;
+  }
+
+  :is(.admin-theme, .vendor-theme, .auth-theme, .collection-theme, .shop-theme) .bg-white:not([class*="dark:"]) {
+    background-color: #1f2937;
+  }
+
+  :is(.admin-theme, .vendor-theme, .auth-theme, .collection-theme, .shop-theme) .border-slate-100:not([class*="dark:"]),
+  :is(.admin-theme, .vendor-theme, .auth-theme, .collection-theme, .shop-theme) .border-slate-200:not([class*="dark:"]),
+  :is(.admin-theme, .vendor-theme, .auth-theme, .collection-theme, .shop-theme) .border-slate-300:not([class*="dark:"]) {
+    border-color: #374151;
+  }
+
+  :is(.admin-theme, .vendor-theme, .auth-theme, .collection-theme, .shop-theme) input.bg-white:not([class*="dark:"]),
+  :is(.admin-theme, .vendor-theme, .auth-theme, .collection-theme, .shop-theme) select.bg-white:not([class*="dark:"]),
+  :is(.admin-theme, .vendor-theme, .auth-theme, .collection-theme, .shop-theme) textarea.bg-white:not([class*="dark:"]) {
+    background-color: #111827;
+    color: #f3f4f6;
+  }
+
+  .auth-theme.bg-gradient-to-br {
+    background-image: linear-gradient(to bottom right, #111827, #1f2937);
+  }
+
+  .auth-theme input:not([class*="dark:"]),
+  .auth-theme select:not([class*="dark:"]),
+  .auth-theme textarea:not([class*="dark:"]) {
+    background-color: #111827;
+    border-color: #4b5563;
+    color: #f3f4f6;
+  }
 }
 
 body {
