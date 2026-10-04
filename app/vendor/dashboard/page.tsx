@@ -170,7 +170,7 @@ export default function ShopDashboard() {
   const cardDisabledClass = "opacity-60 cursor-not-allowed";
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="vendor-theme min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         <header className="mb-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
           <div className="sm:flex sm:items-start sm:justify-between">

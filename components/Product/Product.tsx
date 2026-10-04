@@ -91,7 +91,7 @@ export default function Product({ product, size = "default", hideShop = false, h
               <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">Out of stock</span>
             ) : null}
             {isInactive ? (
-              <span className="rounded bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700">Inactive</span>
+              <span className="rounded bg-slate-200 px-2 py-0.5 text-[10px] font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-200">Inactive</span>
             ) : null}
           </div>
         )}
@@ -146,7 +146,7 @@ export default function Product({ product, size = "default", hideShop = false, h
             <div className={`flex min-w-0 items-center ${isCompact ? "gap-1" : "gap-2"}`}>
               {hasValidBasePrice && hasValidDiscountPrice ? (
                 <>
-                  <span className={`text-gray-500 line-through ${isCompact ? "text-[10px]" : "text-sm"}`}>
+                  <span className={`text-gray-500 line-through dark:text-gray-400 ${isCompact ? "text-[10px]" : "text-sm"}`}>
                     ₹{formatPrice(parsedBasePrice)}
                   </span>
                   <div className="flex min-w-0 items-center gap-1">
@@ -165,7 +165,7 @@ export default function Product({ product, size = "default", hideShop = false, h
                   ₹{formatPrice(parsedBasePrice)}
                 </span>
               ) : (
-                <span className={`font-semibold text-gray-500 ${isCompact ? "text-[10px]" : "text-sm"}`}>
+                <span className={`font-semibold text-gray-500 dark:text-gray-400 ${isCompact ? "text-[10px]" : "text-sm"}`}>
                   Price unavailable
                 </span>
               )}

@@ -639,7 +639,7 @@ export default function ShopDetailsPage({ shop, products, initialData, scope, ac
   };
 
   return (
-    <main className="min-h-screen bg-white dark:bg-gray-950">
+    <main className="shop-theme min-h-screen bg-white dark:bg-gray-950">
       <section className="px-4 pb-0">
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-white via-rose-50/40 to-amber-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 p-4 lg:p-5">
           <div className="mx-auto w-full flex flex-col gap-4">

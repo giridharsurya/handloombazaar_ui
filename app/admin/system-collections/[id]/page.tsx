@@ -171,7 +171,7 @@ function CollectionDetailsPage({
   }, [showFilters]);
 
   return (
-    <main className="min-h-screen bg-white dark:bg-gray-950">
+    <main className="admin-theme min-h-screen bg-white dark:bg-gray-950">
       <section ref={productsSectionRef}>
         <FilterHeader
           pageTitle={collection.name}

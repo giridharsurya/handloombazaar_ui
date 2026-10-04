@@ -109,7 +109,7 @@ export default function AdminSystemCollectionsPage() {
   if (!auth || auth.role !== "admin") return null;
 
   return (
-    <main className="min-h-screen bg-slate-50 text-slate-900">
+    <main className="admin-theme min-h-screen bg-slate-50 text-slate-900">
       <div className="mx-auto w-full">
         <FilterHeader
           pageTitle="System Collections"

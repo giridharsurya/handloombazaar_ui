@@ -87,7 +87,7 @@ export default function VendorPage() {
   const scope = shopDisplayId ? `vendor:${shopDisplayId}` : undefined;
   return (
     <VariantSelectionProvider>
-      <div>
+      <div className="vendor-theme">
         <ShopDetailsPage 
           shop={shop} 
           products={products} 

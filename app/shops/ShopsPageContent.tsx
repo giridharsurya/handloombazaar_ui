@@ -113,7 +113,7 @@ export default function ShopsPageContent() {
   const filteredShops = shops;
 
   return (
-    <main className="min-h-screen bg-white dark:bg-gray-950">
+    <main className="shop-theme min-h-screen bg-white dark:bg-gray-950">
       <section>
         <FilterHeader
           pageTitle="Shops"
