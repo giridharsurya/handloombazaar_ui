@@ -43,6 +43,7 @@ const getOptionSwatchColor = (option: { value: string; color?: string }) => {
 export default function SareesFilter({ attributes, value, onFilterChange }: SareesFilterProps) {
   const DEBUG_FILTERS = true;
   const [draftFilters, setDraftFilters] = useState<FilterState>(value ?? DEFAULT_FILTERS);
+  const [minPriceInput, setMinPriceInput] = useState(String((value ?? DEFAULT_FILTERS).priceRange[0]));
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     price: true,
   });
@@ -56,12 +57,30 @@ export default function SareesFilter({ attributes, value, onFilterChange }: Sare
     : "flex-1 rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:border-rose-600 hover:text-rose-700 dark:bg-gray-800 dark:text-gray-200 dark:hover:border-rose-500";
 
   const handleMinPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const nextMin = Math.min(Number(e.target.value), draftFilters.priceRange[1]);
+    const inputValue = e.target.value;
+    setMinPriceInput(inputValue);
+    if (inputValue === "") return;
+
+    const nextMin = Math.min(Number(inputValue), draftFilters.priceRange[1]);
     const newFilters: FilterState = {
       ...draftFilters,
       priceRange: [nextMin, draftFilters.priceRange[1]],
     };
+    setMinPriceInput(String(nextMin));
     setDraftFilters(newFilters);
+  };
+
+  const handleMinPriceBlur = () => {
+    if (minPriceInput === "") {
+      setMinPriceInput("0");
+      setDraftFilters((current) => ({
+        ...current,
+        priceRange: [0, current.priceRange[1]],
+      }));
+      return;
+    }
+
+    setMinPriceInput(String(draftFilters.priceRange[0]));
   };
 
   const handleMaxPriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -102,13 +121,20 @@ export default function SareesFilter({ attributes, value, onFilterChange }: Sare
   };
 
   const handleApply = () => {
-    if (!hasPendingChanges) {
+    const filtersToApply = minPriceInput === ""
+      ? {
+          ...draftFilters,
+          priceRange: [0, draftFilters.priceRange[1]] as [number, number],
+        }
+      : draftFilters;
+
+    if (JSON.stringify(filtersToApply) === JSON.stringify(externalFilters)) {
       return;
     }
     if (DEBUG_FILTERS) {
-      console.log("[SareesFilter][Apply] Applying filters", draftFilters);
+      console.log("[SareesFilter][Apply] Applying filters", filtersToApply);
     }
-    onFilterChange?.(draftFilters);
+    onFilterChange?.(filtersToApply);
   };
 
   const handleReset = () => {
@@ -116,6 +142,7 @@ export default function SareesFilter({ attributes, value, onFilterChange }: Sare
       console.log("[SareesFilter][Reset] Filters reset", DEFAULT_FILTERS);
     }
     setDraftFilters(DEFAULT_FILTERS);
+    setMinPriceInput("0");
     onFilterChange?.(DEFAULT_FILTERS);
   };
 
@@ -123,6 +150,7 @@ export default function SareesFilter({ attributes, value, onFilterChange }: Sare
     if (!value) return;
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setDraftFilters(value);
+    setMinPriceInput(String(value.priceRange[0]));
   }, [value]);
 
   return (
@@ -150,7 +178,9 @@ export default function SareesFilter({ attributes, value, onFilterChange }: Sare
                   type="number"
                   min={0}
                   max={draftFilters.priceRange[1]}
-                  value={draftFilters.priceRange[0]}
+                  value={minPriceInput}
+                  onFocus={() => setMinPriceInput("")}
+                  onBlur={handleMinPriceBlur}
                   onChange={handleMinPriceChange}
                   className="w-full rounded border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900 focus:border-rose-500 focus:outline-none"
                 />

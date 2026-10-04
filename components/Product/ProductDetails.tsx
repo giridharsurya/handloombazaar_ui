@@ -61,6 +61,12 @@ export default function ProductDetails({
     currentProduct?.shop_name ||
     "";
 
+  const shopLogoUrl =
+    currentProduct?.shop_logo_url ||
+    currentProduct?.shop?.shop_logo_url ||
+    shop?.logo_url ||
+    undefined;
+
   const shopSlug = currentProduct?.shop?.shop_slug || shop?.shop_slug || currentShopDisplayId || "";
   const shopHref = shopSlug ? `/shops/${encodeURIComponent(shopSlug)}` : "#";
 
@@ -381,11 +387,15 @@ export default function ProductDetails({
             </div>
           )}
 
-          <div className="mt-6 flex items-center justify-between gap-3 px-3 py-2 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gradient-to-br from-white via-rose-50/40 to-amber-50/30 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950">
+          <Link
+            href={shopHref}
+            aria-disabled={!shopSlug}
+            className="mt-6 flex items-center justify-between gap-3 rounded-2xl border border-gray-200 bg-gradient-to-br from-white via-rose-50/40 to-amber-50/30 px-3 py-2 transition hover:border-rose-300 dark:border-gray-800 dark:from-gray-900 dark:via-gray-900 dark:to-gray-950 dark:hover:border-rose-700"
+          >
             <div className="flex items-center gap-3">
                 <div className="relative w-10 h-10 rounded-full overflow-hidden">
-                {currentProduct.shop_logo_url && !String(currentProduct.shop_logo_url).startsWith("blob:") ? (
-                  <BackendImage src={currentProduct.shop_logo_url} alt={shopName || "Shop"} fill style={{ objectFit: "cover" }} />
+                {shopLogoUrl && !String(shopLogoUrl).startsWith("blob:") ? (
+                  <BackendImage src={shopLogoUrl} alt={shopName || "Shop"} fill style={{ objectFit: "cover" }} />
                 ) : (
                   <div className="w-full h-full bg-gray-200" />
                 )}
@@ -395,10 +405,10 @@ export default function ProductDetails({
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">{shopName}</p>
               </div>
             </div>
-            <a href={shopHref} className="text-sm font-medium text-rose-600 hover:underline" aria-disabled={!shopSlug}>
+            <span className="text-sm font-medium text-rose-600">
               Visit shop
-            </a>
-          </div>
+            </span>
+          </Link>
 
           <div className="mt-6 border-t border-gray-300 dark:border-gray-700">
             <details className="group border-b border-gray-300 dark:border-gray-700" open={false}>
